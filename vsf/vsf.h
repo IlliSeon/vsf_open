@@ -34,6 +34,8 @@
 #include "component/fundation/buffer/buffer.h"
 #include "component/fundation/stream/stream.h"
 
+#include "component/tool/dynpool/vsf_dynpool.h"
+
 #include "component/mal/vsfmal.h"
 #include "component/mal/vsfscsi.h"
 #include "component/mal/drivers/embflash/embflash.h"

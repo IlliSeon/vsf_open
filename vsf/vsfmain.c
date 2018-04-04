@@ -38,7 +38,11 @@ struct vsfapp_t
 	struct usrapp_t *usrapp;
 
 #ifdef APPCFG_VSFTIMER_EN
+#ifdef APPCFG_BUFMGR_SIZE
+	struct vsf_dynpool_t vsftimer_pool;
+#else
 	VSFPOOL_DEFINE(vsftimer_pool, struct vsftimer_t, APPCFG_VSFTIMER_NUM);
+#endif
 #endif
 
 #if VSFSM_CFG_PREMPT_EN
@@ -67,9 +71,25 @@ struct vsfapp_t
 	.mainq.activate = NULL,
 #endif
 #endif
+
+#if defined(APPCFG_VSFTIMER_EN) && defined(APPCFG_BUFMGR_SIZE)
+	.vsftimer_pool.item_size = sizeof(struct vsftimer_t),
+	.vsftimer_pool.pool_size = APPCFG_VSFTIMER_NUM,
+#endif
 };
 
 #ifdef APPCFG_VSFTIMER_EN
+#ifdef APPCFG_BUFMGR_SIZE
+static struct vsftimer_t* vsftimer_memop_alloc(void)
+{
+	return vsf_dynpool_alloc(&app.vsftimer_pool);
+}
+
+static void vsftimer_memop_free(struct vsftimer_t *timer)
+{
+	vsf_dynpool_free(&app.vsftimer_pool, timer);
+}
+#else
 static struct vsftimer_t* vsftimer_memop_alloc(void)
 {
 	return VSFPOOL_ALLOC(&app.vsftimer_pool, struct vsftimer_t);
@@ -79,6 +99,7 @@ static void vsftimer_memop_free(struct vsftimer_t *timer)
 {
 	VSFPOOL_FREE(&app.vsftimer_pool, timer);
 }
+#endif
 
 const struct vsftimer_mem_op_t vsftimer_memop =
 {
@@ -110,7 +131,11 @@ static void vsfapp_init(struct vsfapp_t *app)
 	vsfhal_tickclk_start();
 
 #ifdef APPCFG_VSFTIMER_EN
+#ifdef APPCFG_BUFMGR_SIZE
+	vsf_dynpool_init(&app->vsftimer_pool);
+#else
 	VSFPOOL_INIT(&app->vsftimer_pool, struct vsftimer_t, APPCFG_VSFTIMER_NUM);
+#endif
 	vsftimer_init((struct vsftimer_mem_op_t *)&vsftimer_memop);
 	vsfhal_tickclk_config_cb(app_tickclk_callback_int, NULL);
 #endif

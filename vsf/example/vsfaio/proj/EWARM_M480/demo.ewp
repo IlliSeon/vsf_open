@@ -2125,6 +2125,15 @@
         </file>
       </group>
       <group>
+        <name>tool</name>
+        <group>
+          <name>dynpool</name>
+          <file>
+            <name>$PROJ_DIR$\..\..\..\..\component\tool\dynpool\vsf_dynpool.c</name>
+          </file>
+        </group>
+      </group>
+      <group>
         <name>usb</name>
         <group>
           <name>class</name>
