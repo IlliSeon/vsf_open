@@ -22,27 +22,6 @@
 
 #define USART_BUF_SIZE	16
 
-static void uart_rx_int(void *p, uint16_t data)
-{
-	uint8_t buf[USART_BUF_SIZE];
-	struct vsf_buffer_t buffer;
-	struct usart_stream_info_t *param = p;
-
-	if (!param->stream_rx)
-		return;
-	
-	buffer.buffer = buf;
-	buf[0] = data & 0xff;
-	buffer.size = vsfhal_usart_rx_get_data_size(param->index);
-	if (buffer.size)
-	{
-		buffer.size = min(buffer.size, USART_BUF_SIZE - 1);
-		buffer.size = vsfhal_usart_rx_bytes(param->index, &buf[1], buffer.size);
-	}
-	buffer.size++;
-	stream_write(param->stream_rx, &buffer);
-}
-
 static void uart_on_tx(void *p)
 {
 	uint8_t buf[USART_BUF_SIZE];
@@ -113,7 +92,7 @@ vsf_err_t usart_stream_init(struct usart_stream_info_t *usart_stream)
 
 	vsfhal_usart_init(usart_stream->index);
 	vsfhal_usart_config_cb(usart_stream->index, usart_stream->int_priority,
-			usart_stream, uart_on_tx, uart_rx_int);
+			usart_stream, uart_on_tx, uart_on_rx);
 	vsfhal_usart_config(usart_stream->index, usart_stream->baudrate,
 			usart_stream->mode);
 

@@ -730,7 +730,7 @@ vsf_err_t stm32_usart_config(uint8_t index, uint32_t baudrate, uint32_t mode)
 }
 
 vsf_err_t stm32_usart_config_callback(uint8_t index, uint32_t int_priority,
-				void *p, void (*ontx)(void *), void (*onrx)(void *, uint16_t))
+				void *p, void (*ontx)(void *), void (*onrx)(void *))
 {
 	USART_TypeDef *usart;
 	uint8_t usart_idx = index & 0x0F;
@@ -810,7 +810,7 @@ ROOTFUNC void USART1_IRQHandler(void)
 {
 	if ((stm32_usart_onrx[0] != NULL) && (USART1->SR & STM32_USART_SR_RXNE))
 	{
-		stm32_usart_onrx[0](stm32_usart_callback_param[0], USART1->DR);
+		stm32_usart_onrx[0](stm32_usart_callback_param[0]);
 	}
 	if ((stm32_usart_ontx[0] != NULL) && (USART1->SR & STM32_USART_SR_TC))
 	{
@@ -825,7 +825,7 @@ ROOTFUNC void USART2_IRQHandler(void)
 {
 	if ((stm32_usart_onrx[1] != NULL) && (USART2->SR & STM32_USART_SR_RXNE))
 	{
-		stm32_usart_onrx[1](stm32_usart_callback_param[1], USART2->DR);
+		stm32_usart_onrx[1](stm32_usart_callback_param[1]);
 	}
 	if ((stm32_usart_ontx[1] != NULL) && (USART2->SR & STM32_USART_SR_TC))
 	{
@@ -840,7 +840,7 @@ ROOTFUNC void USART3_IRQHandler(void)
 {
 	if ((stm32_usart_onrx[2] != NULL) && (USART3->SR & STM32_USART_SR_RXNE))
 	{
-		stm32_usart_onrx[2](stm32_usart_callback_param[2], USART3->DR);
+		stm32_usart_onrx[2](stm32_usart_callback_param[2]);
 	}
 	if ((stm32_usart_ontx[2] != NULL) && (USART3->SR & STM32_USART_SR_TC))
 	{
