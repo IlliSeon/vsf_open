@@ -1963,6 +1963,12 @@
         <name>$PROJ_DIR$\..\..\usrapp\aio\usrapp.c</name>
       </file>
     </group>
+    <group>
+      <name>fakefat32</name>
+      <file>
+        <name>$PROJ_DIR$\..\..\usrapp\fakefat32\usrapp.c</name>
+      </file>
+    </group>
   </group>
   <group>
     <name>vsf</name>
