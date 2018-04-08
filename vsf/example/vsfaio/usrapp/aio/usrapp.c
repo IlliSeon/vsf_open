@@ -74,7 +74,9 @@ struct usrapp_param_t
 	{
 		USB_DT_CONFIG_SIZE,
 		USB_DT_CONFIG,
-		106, 0,		// wTotalLength
+		(sizeof(usrapp_param.usbd.ConfigDescriptor) >> 0) & 0xFF,
+		(sizeof(usrapp_param.usbd.ConfigDescriptor) >> 8) & 0xFF,
+					// wTotalLength
 		0x03,		// bNumInterfaces: 3 interfaces
 		0x01,		// bConfigurationValue: Configuration value
 		0x00,		// iConfiguration: Index of string descriptor describing the configuration
