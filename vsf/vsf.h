@@ -33,6 +33,7 @@
 
 #include "component/fundation/buffer/buffer.h"
 #include "component/fundation/stream/stream.h"
+#include "component/stream/usart_stream/usart_stream.h"
 
 #include "component/tool/dynpool/vsf_dynpool.h"
 

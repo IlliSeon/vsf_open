@@ -88,14 +88,14 @@ vsf_err_t vsfhal_flash_write(uint8_t index, uint32_t addr, uint8_t *buff);
 /*******************************************************************************
 USART
 *******************************************************************************/
-vsf_err_t vsfhal_usart_init(uint8_t index);
-vsf_err_t vsfhal_usart_fini(uint8_t index);
-vsf_err_t vsfhal_usart_config(uint8_t index, uint32_t baudrate, uint32_t mode);
-vsf_err_t vsfhal_usart_config_cb(uint8_t index, uint32_t int_priority, void *p, void (*ontx)(void *), void (*onrx)(void *));
-uint16_t vsfhal_usart_tx_bytes(uint8_t index, uint8_t *data, uint16_t size);
-uint16_t vsfhal_usart_tx_get_free_size(uint8_t index);
-uint16_t vsfhal_usart_rx_bytes(uint8_t index, uint8_t *data, uint16_t size);
-uint16_t vsfhal_usart_rx_get_data_size(uint8_t index);
+vsf_err_t vsfhal_usart_init(vsfhal_uart_t index);
+vsf_err_t vsfhal_usart_fini(vsfhal_uart_t index);
+vsf_err_t vsfhal_usart_config(vsfhal_uart_t index, uint32_t baudrate, uint32_t mode);
+vsf_err_t vsfhal_usart_config_cb(vsfhal_uart_t index, uint32_t int_priority, void *p, void (*ontx)(void *), void (*onrx)(void *));
+uint16_t vsfhal_usart_tx_bytes(vsfhal_uart_t index, uint8_t *data, uint16_t size);
+uint16_t vsfhal_usart_tx_get_free_size(vsfhal_uart_t index);
+uint16_t vsfhal_usart_rx_bytes(vsfhal_uart_t index, uint8_t *data, uint16_t size);
+uint16_t vsfhal_usart_rx_get_data_size(vsfhal_uart_t index);
 
 /*******************************************************************************
 GPIO
@@ -123,12 +123,12 @@ struct vsfhal_i2c_msg_t
 	uint16_t len;
 	uint8_t *buf;
 };
-vsf_err_t vsfhal_i2c_init(uint8_t index);
-vsf_err_t vsfhal_i2c_fini(uint8_t index);
-vsf_err_t vsfhal_i2c_config(uint8_t index, uint16_t kHz);
-vsf_err_t vsfhal_i2c_config_cb(uint8_t index, void *param,
+vsf_err_t vsfhal_i2c_init(vsfhal_i2c_t index);
+vsf_err_t vsfhal_i2c_fini(vsfhal_i2c_t index);
+vsf_err_t vsfhal_i2c_config(vsfhal_i2c_t index, uint16_t kHz);
+vsf_err_t vsfhal_i2c_config_cb(vsfhal_i2c_t index, void *param,
 		void (*cb)(void*, vsf_err_t));
-vsf_err_t vsfhal_i2c_xfer(uint8_t index, uint16_t addr,
+vsf_err_t vsfhal_i2c_xfer(vsfhal_i2c_t index, uint16_t addr,
 		struct vsfhal_i2c_msg_t *msg, uint8_t msg_len);
 
 /*******************************************************************************

@@ -30,6 +30,7 @@
 #define VSFHAL_SLEEP_PWRDOWN				(0x1ul << 1)
 
 // usart
+#define vsfhal_uart_t						uint64_t
 #define VSFHAL_USART_STOPBITS_1				(0x0ul << 4)
 #define VSFHAL_USART_STOPBITS_1P5			(0x1ul << 4)
 #define VSFHAL_USART_STOPBITS_2				(0x1ul << 4)
@@ -45,6 +46,7 @@
 #define VSFHAL_GPIO_PULLDOWN				(0x1ul << 4)
 
 // I2C
+#define vsfhal_i2c_t						uint32_t
 #define VSFHAL_I2C_READ						(0x1ul << 0)
 #define VSFHAL_I2C_WRITE					(0x0ul << 0)
 #define VSFHAL_I2C_NOSTART					(0x1ul << 4)

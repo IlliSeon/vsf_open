@@ -20,19 +20,21 @@
 #ifndef __USART_STREAM_H_INCLUDED__
 #define __USART_STREAM_H_INCLUDED__
 
-struct usart_stream_info_t
+struct usart_stream_t
 {
 	uint8_t index;
 	uint8_t mode;
 	uint16_t int_priority;
 	uint32_t baudrate;
 	
-	// private
 	struct vsf_stream_t *stream_tx;
 	struct vsf_stream_t *stream_rx;
 };
 
-vsf_err_t usart_stream_init(struct usart_stream_info_t *usart_stream);
-vsf_err_t usart_stream_fini(struct usart_stream_info_t *usart_stream);
+// backward compatibility
+#define usart_stream_info_t			usart_stream_t
+
+vsf_err_t usart_stream_init(struct usart_stream_t *usart_stream);
+vsf_err_t usart_stream_fini(struct usart_stream_t *usart_stream);
 
 #endif	// __USART_STREAM_H_INCLUDED__

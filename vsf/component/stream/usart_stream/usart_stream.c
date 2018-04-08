@@ -18,7 +18,6 @@
  ***************************************************************************/
 
 #include "vsf.h"
-#include "usart_stream.h"
 
 #define USART_BUF_SIZE	16
 
@@ -26,7 +25,7 @@ static void uart_on_tx(void *p)
 {
 	uint8_t buf[USART_BUF_SIZE];
 	struct vsf_buffer_t buffer;
-	struct usart_stream_info_t *param = p;
+	struct usart_stream_t *param = p;
 
 	if (!param->stream_tx)
 		return;
@@ -48,7 +47,7 @@ static void uart_on_rx(void *p)
 {
 	uint8_t buf[USART_BUF_SIZE];
 	struct vsf_buffer_t buffer;
-	struct usart_stream_info_t *param = p;
+	struct usart_stream_t *param = p;
 
 	if (!param->stream_rx)
 		return;
@@ -63,7 +62,7 @@ static void uart_on_rx(void *p)
 	}
 }
 
-vsf_err_t usart_stream_init(struct usart_stream_info_t *usart_stream)
+vsf_err_t usart_stream_init(struct usart_stream_t *usart_stream)
 {
 	if (usart_stream->index == VSFHAL_DUMMY_PORT)
 		return VSFERR_FAIL;
@@ -99,7 +98,7 @@ vsf_err_t usart_stream_init(struct usart_stream_info_t *usart_stream)
 	return VSFERR_NONE;
 }
 
-vsf_err_t usart_stream_fini(struct usart_stream_info_t *usart_stream)
+vsf_err_t usart_stream_fini(struct usart_stream_t *usart_stream)
 {
 	if (usart_stream->index == VSFHAL_DUMMY_PORT)
 		return VSFERR_FAIL;
