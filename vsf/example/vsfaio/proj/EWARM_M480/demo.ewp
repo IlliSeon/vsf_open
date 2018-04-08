@@ -1969,6 +1969,12 @@
         <name>$PROJ_DIR$\..\..\usrapp\fakefat32\usrapp.c</name>
       </file>
     </group>
+    <group>
+      <name>usbcdc</name>
+      <file>
+        <name>$PROJ_DIR$\..\..\usrapp\usbcdc\usrapp.c</name>
+      </file>
+    </group>
   </group>
   <group>
     <name>vsf</name>
@@ -2294,6 +2300,12 @@
             <name>startup</name>
             <file>
               <name>$PROJ_DIR$\..\..\..\..\hal\cpu\M480\startup\IAR\startup_M480.s</name>
+            </file>
+          </group>
+          <group>
+            <name>usart</name>
+            <file>
+              <name>$PROJ_DIR$\..\..\..\..\hal\cpu\M480\usart\M480_USART.c</name>
             </file>
           </group>
           <group>
