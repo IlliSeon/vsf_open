@@ -290,12 +290,10 @@ vsf_err_t vsfhal_core_init(void *p)
 			((freq_in / vsfhal_info.hclk_freq_hz) - 1);
 	CLK->CLKSEL0 = (CLK->CLKSEL0 & ~CLK_CLKSEL0_HCLKSEL_Msk) | temp32;
 
-#if VSFHAL_USBD_EN || VSFHAL_HCD_EN
 	SYS->USBPHY &= ~SYS_USBPHY_HSUSBROLE_Msk;
 	SYS->USBPHY = (SYS->USBPHY & ~(SYS_USBPHY_HSUSBROLE_Msk | SYS_USBPHY_HSUSBACT_Msk)) | SYS_USBPHY_HSUSBEN_Msk;
-	for (i = 0; i < 0x1000; i++);
-		SYS->USBPHY |= SYS_USBPHY_HSUSBACT_Msk;
-#endif
+	for (volatile int i = 0; i < 0x1000; i++);
+	SYS->USBPHY |= SYS_USBPHY_HSUSBACT_Msk;
 
 	m480_lock_reg();
 	SCB->VTOR = vsfhal_info.vector_table;
