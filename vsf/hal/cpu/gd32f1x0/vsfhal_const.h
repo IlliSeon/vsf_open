@@ -43,6 +43,9 @@
 #define VSFHAL_PWM_POLARITY_HIGH			0x02
 #define VSFHAL_PWM_POLARITY_LOW				0x00
 
+// USBD
+#define VSFHAL_HAS_USBD
+
 #if 0
 #define gd32f1x0_GPIO_OD				0x04
 

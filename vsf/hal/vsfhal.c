@@ -18,6 +18,7 @@
  ***************************************************************************/
 #include "vsfhal.h"
 
+#ifdef VSFHAL_HAS_USBD
 const struct vsfhal_usbd_t vsfhal_usbd =
 {
 	vsfhal_usbd_init,
@@ -65,3 +66,5 @@ const struct vsfhal_usbd_t vsfhal_usbd =
 	vsfhal_usbd_ep_enable_OUT,
 	&vsfhal_usbd_callback,
 };
+#endif
+

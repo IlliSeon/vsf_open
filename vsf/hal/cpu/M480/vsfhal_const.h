@@ -62,6 +62,9 @@
 #define VSFHAL_SPI_MSB_FIRST				0x00
 #define VSFHAL_SPI_LSB_FIRST				(SPI_CTL_LSB_Msk)
 
+// USBD
+#define VSFHAL_HAS_USBD
+
 // OHCI
 #define VSFHAL_HCD_PORT1					(0x1 << 0)
 #define VSFHAL_HCD_PORT2					(0x1 << 1)
