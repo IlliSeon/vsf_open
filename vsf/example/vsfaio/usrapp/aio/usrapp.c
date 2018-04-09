@@ -570,7 +570,7 @@ static void usrapp_usbd_conn(void *p)
 	struct usrapp_t *app = (struct usrapp_t *)p;
 
 	vsfusbd_device_init(&app->usbd.device);
-	app->usbd.device.drv->connect();
+	vsfusbd_connect(&app->usbd.device);
 	if (app_hwcfg.usbd.pullup.port != VSFHAL_DUMMY_PORT)
 		vsfhal_gpio_set(app_hwcfg.usbd.pullup.port, 1 << app_hwcfg.usbd.pullup.pin);
 }
@@ -583,7 +583,7 @@ void usrapp_srt_init(struct usrapp_t *app)
 		vsfhal_gpio_clear(app_hwcfg.usbd.pullup.port, 1 << app_hwcfg.usbd.pullup.pin);
 		vsfhal_gpio_config(app_hwcfg.usbd.pullup.port, app_hwcfg.usbd.pullup.pin, VSFHAL_GPIO_OUTPP);
 	}
-	app->usbd.device.drv->disconnect();
+	vsfusbd_disconnect(&app->usbd.device);
 
 	vsftimer_create_cb(200, 1, usrapp_usbd_conn, app);
 	vsfsm_pt_init(&usrapp.sm, &usrapp.pt);

@@ -172,6 +172,21 @@ enum vsfhal_usbd_eptype_t
 	USB_EP_TYPE_BULK,
 	USB_EP_TYPE_ISO
 };
+enum vsfhal_usbd_evt_t
+{
+	VSFHAL_USBD_ON_ATTACH = 0,
+	VSFHAL_USBD_ON_DETACH,
+	VSFHAL_USBD_ON_RESET,
+	VSFHAL_USBD_ON_SETUP,
+	VSFHAL_USBD_ON_ERROR,
+	VSFHAL_USBD_ON_SUSPEND,
+	VSFHAL_USBD_ON_RESUME,
+	VSFHAL_USBD_ON_SOF,
+	VSFHAL_USBD_ON_IN,
+	VSFHAL_USBD_ON_OUT,
+	VSFHAL_USBD_ON_UNDERFLOW,
+	VSFHAL_USBD_ON_OVERFLOW,
+};
 enum vsfhal_usbd_error_t
 {
 	USBERR_ERROR,
@@ -181,18 +196,7 @@ enum vsfhal_usbd_error_t
 struct vsfhal_usbd_callback_t
 {
 	void *param;
-	vsf_err_t (*on_attach)(void*);
-	vsf_err_t (*on_detach)(void*);
-	vsf_err_t (*on_reset)(void*);
-	vsf_err_t (*on_setup)(void*);
-	vsf_err_t (*on_error)(void*, enum vsfhal_usbd_error_t error);
-	vsf_err_t (*on_wakeup)(void*);
-	vsf_err_t (*on_suspend)(void*);
-	vsf_err_t (*on_sof)(void*);
-	vsf_err_t (*on_underflow)(void*, uint8_t);
-	vsf_err_t (*on_overflow)(void*, uint8_t);
-	vsf_err_t (*on_in)(void*, uint8_t);
-	vsf_err_t (*on_out)(void*, uint8_t);
+	void (*on_event)(void*, enum vsfhal_usbd_evt_t, uint32_t);
 };
 struct vsfhal_usbd_t
 {
@@ -207,10 +211,7 @@ struct vsfhal_usbd_t
 	vsf_err_t (*set_address)(uint8_t addr);
 	uint8_t (*get_address)(void);
 
-	vsf_err_t (*suspend)(void);
-	vsf_err_t (*resume)(void);
-	vsf_err_t (*lowpower)(uint8_t level);
-
+	vsf_err_t (*wakeup)(void);
 	uint32_t (*get_frame_number)(void);
 
 	vsf_err_t (*get_setup)(uint8_t *buffer);
@@ -259,9 +260,7 @@ vsf_err_t vsfhal_usbd_connect(void);
 vsf_err_t vsfhal_usbd_disconnect(void);
 vsf_err_t vsfhal_usbd_set_address(uint8_t addr);
 uint8_t vsfhal_usbd_get_address(void);
-vsf_err_t vsfhal_usbd_suspend(void);
-vsf_err_t vsfhal_usbd_resume(void);
-vsf_err_t vsfhal_usbd_lowpower(uint8_t level);
+vsf_err_t vsfhal_usbd_wakeup(void);
 uint32_t vsfhal_usbd_get_frame_number(void);
 vsf_err_t vsfhal_usbd_get_setup(uint8_t *buffer);
 vsf_err_t vsfhal_usbd_prepare_buffer(void);

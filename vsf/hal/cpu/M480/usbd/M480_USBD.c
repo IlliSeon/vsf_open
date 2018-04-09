@@ -80,7 +80,7 @@ vsf_err_t vsfhal_usbd_init(int32_t int_priority)
 	}
 
 #ifdef VSFUSBD_CFG_HIGHSPEED
-	HSUSBD->OPER = 2;
+	HSUSBD->OPER = HSUSBD_OPER_HISPDEN_Msk;
 #else
 	HSUSBD->OPER = 0;
 #endif
@@ -154,18 +154,9 @@ uint8_t vsfhal_usbd_get_address(void)
 	return HSUSBD->FADDR;
 }
 
-vsf_err_t vsfhal_usbd_suspend(void)
+vsf_err_t vsfhal_usbd_wakeup(void)
 {
-	return VSFERR_NONE;
-}
-
-vsf_err_t vsfhal_usbd_resume(void)
-{
-	return VSFERR_NONE;
-}
-
-vsf_err_t vsfhal_usbd_lowpower(uint8_t level)
-{
+	HSUSBD->OPER |= HSUSBD_OPER_RESUMEEN_Msk;
 	return VSFERR_NONE;
 }
 
@@ -756,6 +747,12 @@ vsf_err_t vsfhal_usbd_ep_enable_OUT(uint8_t idx)
 	return VSFERR_BUG;
 }
 
+static void vsfhal_usbd_cb(enum vsfhal_usbd_evt_t evt, uint32_t value)
+{
+	if (vsfhal_usbd_callback.on_event != NULL)
+		vsfhal_usbd_callback.on_event(vsfhal_usbd_callback.param, evt, value);
+}
+
 void USB_Istr(void)
 {
 	uint32_t IrqStL, IrqSt;
@@ -773,16 +770,20 @@ void USB_Istr(void)
 		IrqSt = HSUSBD->BUSINTSTS;
 		IrqSt &= HSUSBD->BUSINTEN;
 
+		if (IrqSt & HSUSBD_BUSINTSTS_SOFIF_Msk) {
+			vsfhal_usbd_cb(VSFHAL_USBD_ON_SOF, 0);
+		}
 		if (IrqSt & HSUSBD_BUSINTSTS_RSTIF_Msk) {
 			vsfhal_status_out = false;
-
-			if (vsfhal_usbd_callback.on_reset != NULL)
-			{
-				vsfhal_usbd_callback.on_reset(\
-						vsfhal_usbd_callback.param);
-			}
+			vsfhal_usbd_cb(VSFHAL_USBD_ON_RESET, 0);
 			HSUSBD->BUSINTSTS = HSUSBD_BUSINTSTS_RSTIF_Msk;
 			HSUSBD->CEPINTSTS = 0x1ffc;
+		}
+		if (IrqSt & HSUSBD_BUSINTSTS_RESUMEIF_Msk) {
+			vsfhal_usbd_cb(VSFHAL_USBD_ON_RESUME, 0);
+		}
+		if (IrqSt & HSUSBD_BUSINTSTS_SUSPENDIF_Msk) {
+			vsfhal_usbd_cb(VSFHAL_USBD_ON_SUSPEND, 0);
 		}
 	}
 
@@ -801,11 +802,7 @@ void USB_Istr(void)
 		//		in some condition, the under line interrupt MAYBE in one routine
 		if (IrqSt & HSUSBD_CEPINTSTS_TXPKIF_Msk) {
 			HSUSBD->CEPINTSTS = HSUSBD_CEPINTSTS_TXPKIF_Msk;
-
-			if (vsfhal_usbd_callback.on_in != NULL)
-			{
-				vsfhal_usbd_callback.on_in(vsfhal_usbd_callback.param, 0);
-			}
+			vsfhal_usbd_cb(VSFHAL_USBD_ON_IN, 0);
 		}
 
 		if (IrqSt & HSUSBD_CEPINTSTS_STSDONEIF_Msk) {
@@ -813,37 +810,23 @@ void USB_Istr(void)
 
 			if (!vsfhal_setup_status_IN)
 			{
-				if (vsfhal_usbd_callback.on_in != NULL)
-				{
-					vsfhal_usbd_callback.on_in(vsfhal_usbd_callback.param, 0);
-				}
+				vsfhal_usbd_cb(VSFHAL_USBD_ON_IN, 0);
 			}
 			else
 			{
 				vsfhal_status_out = true;
-				if (vsfhal_usbd_callback.on_out != NULL)
-				{
-					vsfhal_usbd_callback.on_out(vsfhal_usbd_callback.param, 0);
-				}
+				vsfhal_usbd_cb(VSFHAL_USBD_ON_OUT, 0);
 			}
 		}
 
 		if (IrqSt & HSUSBD_CEPINTSTS_SETUPPKIF_Msk) {
 			HSUSBD->CEPINTSTS = HSUSBD_CEPINTSTS_SETUPPKIF_Msk;
-
-			if (vsfhal_usbd_callback.on_setup != NULL)
-			{
-				vsfhal_usbd_callback.on_setup(vsfhal_usbd_callback.param);
-			}
+			vsfhal_usbd_cb(VSFHAL_USBD_ON_SETUP, 0);
 		}
 
 		if (IrqSt & HSUSBD_CEPINTSTS_RXPKIF_Msk) {
 			HSUSBD->CEPINTSTS = HSUSBD_CEPINTSTS_RXPKIF_Msk;
-
-			if (vsfhal_usbd_callback.on_out != NULL)
-			{
-				vsfhal_usbd_callback.on_out(vsfhal_usbd_callback.param, 0);
-			}
+			vsfhal_usbd_cb(VSFHAL_USBD_ON_OUT, 0);
 		}
 	}
 
@@ -852,7 +835,6 @@ void USB_Istr(void)
 	{
 		int i;
 		uint8_t ep;
-		void *param = vsfhal_usbd_callback.param;
 
 		for (i = 0; i < M480_USBD_EP_NUM - 2; i++)
 		{
@@ -865,20 +847,14 @@ void USB_Istr(void)
 				if (IrqSt & HSUSBD_EPINTSTS_TXPKIF_Msk)
 				{
 					M480_USBD_EP_REG(i, EP[0].EPINTSTS) = HSUSBD_EPINTSTS_TXPKIF_Msk;
-					if (vsfhal_usbd_callback.on_in != NULL)
-					{
-						vsfhal_usbd_callback.on_in(param, ep);
-					}
+					vsfhal_usbd_cb(VSFHAL_USBD_ON_IN, ep);
 				}
 				if (IrqSt & HSUSBD_EPINTSTS_RXPKIF_Msk)
 				{
 					M480_USBD_EP_REG(i, EP[0].EPINTEN) &= ~HSUSBD_EPINTEN_RXPKIEN_Msk;
 					M480_USBD_EP_REG(i, EP[0].EPINTSTS) = HSUSBD_EPINTSTS_RXPKIF_Msk;
 
-					if ((vsfhal_usbd_callback.on_out != NULL))
-					{
-						vsfhal_usbd_callback.on_out(param, ep);
-					}
+					vsfhal_usbd_cb(VSFHAL_USBD_ON_OUT, ep);
 				}
 			}
 		}
