@@ -57,7 +57,14 @@ struct vsfhal_info_t
 	uint32_t hclk_freq_hz;
 	uint32_t pclk_freq_hz;
 };
+struct vsfhal_afio_t
+{
+	uint8_t port;
+	uint8_t pin;
+	uint8_t remap;
+};
 
+vsf_err_t vsfhal_afio_config(struct vsfhal_afio_t *afio);
 vsf_err_t vsfhal_core_get_info(struct vsfhal_info_t **info);
 
 // special

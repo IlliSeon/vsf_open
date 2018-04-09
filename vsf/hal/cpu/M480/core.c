@@ -50,6 +50,26 @@ static struct vsfhal_info_t vsfhal_info =
 	PCLK_FREQ_HZ,
 };
 
+vsf_err_t vsfhal_afio_config(struct vsfhal_afio_t *afio)
+{
+	if(afio->port > 7 || afio->pin > 15)
+	{
+		return VSFERR_IO;
+	}
+
+	if(afio->pin >= 8)
+	{
+		*(&(SYS -> GPA_MFPH) + (afio->port << 1)) &= ~(SYS_GPA_MFPH_PA8MFP_Msk << (afio->pin % 8 << 2));
+		*(&(SYS -> GPA_MFPH) + (afio->port << 1)) |= afio->remap << (SYS_GPA_MFPH_PA8MFP_Pos + (afio->pin % 8 << 2));
+	}
+	else
+	{
+		*(&(SYS -> GPA_MFPL) + (afio->port << 1)) &= ~(SYS_GPA_MFPL_PA0MFP_Msk << (afio->pin % 8 << 2));
+		*(&(SYS -> GPA_MFPL) + (afio->port << 1)) |= afio->remap << (SYS_GPA_MFPL_PA0MFP_Pos + (afio->pin % 8 << 2));
+	}
+	return VSFERR_NONE;
+}
+
 vsf_err_t vsfhal_core_get_info(struct vsfhal_info_t **info)
 {
 	*info = &vsfhal_info;
