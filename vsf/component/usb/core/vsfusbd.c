@@ -1153,7 +1153,7 @@ vsfusbd_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		// not error and transact not valid
 		if ((evt & ~VSFUSBD_EVT_ERR_MASK) == VSFUSBD_INTEVT_ERR)
 		{
-			uint32_t errcode = evt & VSFUSBD_EVT_ERR_MASK;
+			uint8_t errcode = evt & VSFUSBD_EVT_ERR_MASK;
 			vsfusbd_usr_cb(device, VSFUSBD_USREVT_ERROR, &errcode);
 		}
 		else
@@ -1190,10 +1190,12 @@ vsfusbd_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 			switch (evt & VSFUSBD_EVT_EVT_MASK)
 			{
 			case VSFUSBD_INTEVT_IN:
+				vsfusbd_usr_cb(device, VSFUSBD_USREVT_IN, &ep);
 				if (device->IN_handler[ep] != NULL)
 					device->IN_handler[ep](device, ep);
 				break;
 			case VSFUSBD_INTEVT_OUT:
+				vsfusbd_usr_cb(device, VSFUSBD_USREVT_OUT, &ep);
 				if (device->OUT_handler[ep] != NULL)
 					device->OUT_handler[ep](device, ep);
 				break;
