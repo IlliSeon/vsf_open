@@ -30,6 +30,9 @@
 #define VSFHAL_GPIO_PULLUP					3
 #define VSFHAL_GPIO_PULLDOWN				4
 
+#define vsfhal_usart_t						uint8_t
+#define vsfhal_i2c_t						uint8_t
+
 #define vsf_gint_t							bool
 void vsf_enter_critical(void);
 void vsf_leave_critical(void);

@@ -46,6 +46,9 @@
 // USBD
 #define VSFHAL_HAS_USBD
 
+#define vsfhal_usart_t						uint8_t
+#define vsfhal_i2c_t						uint8_t
+
 #if 0
 #define gd32f1x0_GPIO_OD				0x04
 

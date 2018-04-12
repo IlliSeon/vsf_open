@@ -30,7 +30,7 @@
 #define VSFHAL_SLEEP_PWRDOWN				(0x1ul << 1)
 
 // usart
-#define vsfhal_uart_t						uint64_t
+#define vsfhal_usart_t						uint64_t
 #define VSFHAL_USART_STOPBITS_1				(0x0ul << 4)
 #define VSFHAL_USART_STOPBITS_1P5			(0x1ul << 4)
 #define VSFHAL_USART_STOPBITS_2				(0x1ul << 4)

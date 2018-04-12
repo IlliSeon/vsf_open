@@ -1,8 +1,6 @@
 #include "vsf.h"
 #include "core.h"
 
-#if VSFHAL_I2C_EN
-
 #define I2C_CON_I2C_STS		I2C_CTL0_SI_Msk
 #define I2C_CON_START		I2C_CTL0_STA_Msk
 #define I2C_CON_STOP		I2C_CTL0_STO_Msk
@@ -344,6 +342,3 @@ ROOTFUNC void I2C2_IRQHandler(void)
 {
 	i2c_handler(I2C2, &i2c_ctrl[2]);
 }
-
-#endif
-
