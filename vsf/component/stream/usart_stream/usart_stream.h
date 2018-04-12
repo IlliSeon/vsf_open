@@ -22,11 +22,11 @@
 
 struct usart_stream_t
 {
-	uint8_t index;
+	vsfhal_usart_t index;
 	uint8_t mode;
 	uint16_t int_priority;
 	uint32_t baudrate;
-	
+
 	struct vsf_stream_t *stream_tx;
 	struct vsf_stream_t *stream_rx;
 };
