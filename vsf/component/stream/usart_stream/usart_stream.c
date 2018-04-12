@@ -63,6 +63,12 @@ static void uart_on_rx(void *p)
 	}
 }
 
+vsf_err_t usart_stream_config(struct usart_stream_t *usart_stream)
+{
+	return vsfhal_usart_config(usart_stream->index, usart_stream->baudrate,
+			usart_stream->mode);
+}
+
 vsf_err_t usart_stream_init(struct usart_stream_t *usart_stream)
 {
 	if (!usart_stream->stream_tx && !usart_stream->stream_rx)
@@ -90,10 +96,7 @@ vsf_err_t usart_stream_init(struct usart_stream_t *usart_stream)
 	vsfhal_usart_init(usart_stream->index);
 	vsfhal_usart_config_cb(usart_stream->index, usart_stream->int_priority,
 			usart_stream, uart_on_tx, uart_on_rx);
-	vsfhal_usart_config(usart_stream->index, usart_stream->baudrate,
-			usart_stream->mode);
-
-	return VSFERR_NONE;
+	return usart_stream_config(usart_stream);
 }
 
 vsf_err_t usart_stream_fini(struct usart_stream_t *usart_stream)

@@ -36,5 +36,6 @@ struct usart_stream_t
 
 vsf_err_t usart_stream_init(struct usart_stream_t *usart_stream);
 vsf_err_t usart_stream_fini(struct usart_stream_t *usart_stream);
+vsf_err_t usart_stream_config(struct usart_stream_t *usart_stream);
 
 #endif	// __USART_STREAM_H_INCLUDED__
