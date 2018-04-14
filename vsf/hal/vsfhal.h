@@ -88,14 +88,16 @@ vsf_err_t vsfhal_flash_write(uint8_t index, uint32_t addr, uint8_t *buff);
 /*******************************************************************************
 USART
 *******************************************************************************/
-vsf_err_t vsfhal_usart_init(vsfhal_uart_t index);
-vsf_err_t vsfhal_usart_fini(vsfhal_uart_t index);
-vsf_err_t vsfhal_usart_config(vsfhal_uart_t index, uint32_t baudrate, uint32_t mode);
-vsf_err_t vsfhal_usart_config_cb(vsfhal_uart_t index, uint32_t int_priority, void *p, void (*ontx)(void *), void (*onrx)(void *));
-uint16_t vsfhal_usart_tx_bytes(vsfhal_uart_t index, uint8_t *data, uint16_t size);
-uint16_t vsfhal_usart_tx_get_free_size(vsfhal_uart_t index);
-uint16_t vsfhal_usart_rx_bytes(vsfhal_uart_t index, uint8_t *data, uint16_t size);
-uint16_t vsfhal_usart_rx_get_data_size(vsfhal_uart_t index);
+vsf_err_t vsfhal_usart_init(vsfhal_usart_t index);
+vsf_err_t vsfhal_usart_fini(vsfhal_usart_t index);
+vsf_err_t vsfhal_usart_config(vsfhal_usart_t index, uint32_t baudrate, uint32_t mode);
+vsf_err_t vsfhal_usart_config_cb(vsfhal_usart_t index, uint32_t int_priority, void *p, void (*ontx)(void *), void (*onrx)(void *));
+uint16_t vsfhal_usart_tx_bytes(vsfhal_usart_t index, uint8_t *data, uint16_t size);
+uint16_t vsfhal_usart_tx_get_data_size(vsfhal_usart_t index);
+uint16_t vsfhal_usart_tx_get_free_size(vsfhal_usart_t index);
+uint16_t vsfhal_usart_rx_bytes(vsfhal_usart_t index, uint8_t *data, uint16_t size);
+uint16_t vsfhal_usart_rx_get_data_size(vsfhal_usart_t index);
+uint16_t vsfhal_usart_rx_get_free_size(vsfhal_usart_t index);
 
 /*******************************************************************************
 GPIO

@@ -48,32 +48,31 @@ static void *vsfhal_usart_callback_param[VSFHAL_USART_NUM];
 //		bit44 - bit47	: PORT				4bit
 //		bit48 - bit51	: Pin				4bit
 //		bit52 - bit55	: remap				4bit
-//		enablePin
-//		bit56 - bit59	: enable			4bit
 
 #define M480_UART_PINNUM					4
 #define M480_USART_IDX						8
 #define M480_USART_IO						12
-#define M480_USART_PORT						4
-#define M480_USART_PIN						4
-#define M480_USART_REMAP					4
-#define M480_USART_PIN_ENABLE				M480_UART_PINNUM
+#define M480_USART_IO_PORT					4
+#define M480_USART_IO_PIN					4
+#define M480_USART_IO_REMAP					4
 
 #define M480_USART_IDX_MASK					((1 << M480_USART_IDX) - 1)
-#define M480_USART_IO_OFFSET				(M480_USART_IDX)
 #define M480_USART_IO_MASK					((1 << M480_USART_IO) - 1)
-#define M480_USART_ATTR_MASK				((1 << M480_USART_PIN) - 1)
-#define M480_USART_PIN_ENABLE_OFFSET		(M480_USART_IDX + M480_USART_IO * M480_UART_PINNUM)
-#define M480_USART_PIN_ENABLE_MASK			((1 << M480_USART_PIN_ENABLE) -1)
+#define M480_USART_IO_PORT_OFFSET			(0)
+#define M480_USART_IO_PORT_MASK				(((1 << M480_USART_IO_PORT) - 1) << M480_USART_IO_PORT_OFFSET)
+#define M480_USART_IO_PIN_OFFSET			(M480_USART_IO_PORT_OFFSET + M480_USART_IO_PORT)
+#define M480_USART_IO_PIN_MASK				(((1 << M480_USART_IO_PIN) - 1) << M480_USART_IO_PIN_OFFSET)
+#define M480_USART_IO_REMAP_OFFSET			(M480_USART_IO_PIN_OFFSET + M480_USART_IO_PIN)
+#define M480_USART_IO_REMAP_MASK			(((1 << M480_USART_IO_REMAP) - 1) << M480_USART_IO_REMAP_OFFSET)
 
 vsf_err_t vsfhal_usart_init(vsfhal_usart_t index)
 {
-	uint8_t enable = (index >> M480_USART_PIN_ENABLE_OFFSET) & M480_USART_PIN_ENABLE_MASK;
 	uint8_t uart_idx = (uint8_t)(index & M480_USART_IDX_MASK);
 	const struct M480_uart_t *uart_regparam = &M480_uart[uart_idx];
 	struct vsfhal_afio_t afio;
 	vsf_err_t err;
 	uint8_t i;
+	uint16_t remap;
 
 	if(uart_idx > 5)
 	{
@@ -95,13 +94,17 @@ vsf_err_t vsfhal_usart_init(vsfhal_usart_t index)
 		SYS->IPRST1 |= uart_regparam->rstmsk;
 		SYS->IPRST1 &= ~uart_regparam->rstmsk;
 	}
+
+	index >>= M480_USART_IDX;
 	for(i = 0; i < M480_UART_PINNUM; i++)
 	{
-		if((enable >> i) & 1)
+		remap = index & M480_USART_IO_MASK;
+		index >>= M480_USART_IO;
+		if(remap)
 		{
-			afio.port = (index >> (M480_USART_IDX + M480_USART_IO * i)) & M480_USART_ATTR_MASK;
-			afio.pin = (index >> (M480_USART_IDX + M480_USART_IO * i) >> M480_USART_PORT) & M480_USART_ATTR_MASK;
-			afio.remap = (index >> (M480_USART_IDX + M480_USART_IO * i) >> M480_USART_PORT + M480_USART_PIN) & M480_USART_ATTR_MASK;
+			afio.port = (remap & M480_USART_IO_PORT_MASK) >> M480_USART_IO_PORT_OFFSET;
+			afio.pin = (remap & M480_USART_IO_PIN_MASK) >> M480_USART_IO_PIN_OFFSET;
+			afio.remap = (remap & M480_USART_IO_REMAP_MASK) >> M480_USART_IO_REMAP_OFFSET;
 			err = vsfhal_afio_config(&afio);
 			if(err != VSFERR_NONE)
 			{
@@ -143,7 +146,7 @@ vsf_err_t vsfhal_usart_config(vsfhal_usart_t index, uint32_t baudrate, uint32_t 
 
 	usart->FUNCSEL = 0;
 	usart->LINE = reg_line | 3;
-	usart->FIFO = 0x3ul << 4; // 14
+	usart->FIFO = 0x2ul << 4; // 8
 	usart->TOUT = 60;
 
 	if (vsfhal_core_get_info(&info))
@@ -195,20 +198,20 @@ uint16_t vsfhal_usart_tx_bytes(vsfhal_usart_t index, uint8_t *data, uint16_t siz
 	return size;
 }
 
-uint16_t vsfhal_usart_tx_get_free_size(vsfhal_usart_t index)
+uint16_t vsfhal_usart_tx_get_data_size(vsfhal_usart_t index)
 {
 	uint8_t uart_idx = (uint8_t)(index & M480_USART_IDX_MASK);
 	UART_T *usart = (UART_T *)(UART0_BASE + (uart_idx << 12));
 	uint32_t fifo_len = 16;
 
-	if (usart->FIFOSTS & UART_FIFOSTS_TXFULL_Msk)
-	{
-		return 0;
-	}
-	else
-	{
-		return fifo_len - ((usart->FIFOSTS & UART_FIFOSTS_TXPTR_Msk) >> UART_FIFOSTS_TXPTR_Pos);
-	}
+	return (usart->FIFOSTS & UART_FIFOSTS_TXFULL_Msk) ? fifo_len :
+		((usart->FIFOSTS & UART_FIFOSTS_TXPTR_Msk) >> UART_FIFOSTS_TXPTR_Pos);
+}
+
+uint16_t vsfhal_usart_tx_get_free_size(vsfhal_usart_t index)
+{
+	uint32_t fifo_len = 16;
+	return fifo_len - vsfhal_usart_tx_get_data_size(index);
 }
 
 uint16_t vsfhal_usart_rx_bytes(vsfhal_usart_t index, uint8_t *data, uint16_t size)
@@ -247,13 +250,24 @@ uint16_t vsfhal_usart_rx_get_data_size(vsfhal_usart_t index)
 	}
 }
 
+uint16_t vsfhal_usart_rx_get_free_size(vsfhal_usart_t index)
+{
+	uint32_t fifo_len = 16;
+	return fifo_len - vsfhal_usart_rx_get_data_size(index);
+}
+
 static void uart_handler(vsfhal_usart_t index)
 {
 	uint8_t uart_idx = (uint8_t)(index & M480_USART_IDX_MASK);
 	UART_T *usart = (UART_T *)(UART0_BASE + (uart_idx << 12));
 
-	if (usart->INTSTS & (UART_INTSTS_RDAIF_Msk | UART_INTSTS_RXTOINT_Msk))
+	if (usart->INTSTS & UART_INTSTS_RDAIF_Msk)
 	{
+		vsfhal_usart_onrx[uart_idx](vsfhal_usart_callback_param[uart_idx]);
+	}
+	if (usart->INTSTS & UART_INTSTS_RXTOIF_Msk)
+	{
+		// on idle
 		vsfhal_usart_onrx[uart_idx](vsfhal_usart_callback_param[uart_idx]);
 	}
 

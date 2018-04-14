@@ -29,6 +29,9 @@ struct usart_stream_t
 
 	struct vsf_stream_t *stream_tx;
 	struct vsf_stream_t *stream_rx;
+
+	// private
+	bool txing;
 };
 
 // backward compatibility
