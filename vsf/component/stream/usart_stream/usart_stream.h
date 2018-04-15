@@ -32,6 +32,7 @@ struct usart_stream_t
 
 	// private
 	bool txing;
+	bool rx_pend;
 };
 
 // backward compatibility

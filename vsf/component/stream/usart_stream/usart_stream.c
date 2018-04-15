@@ -76,6 +76,8 @@ static void uart_on_rx(void *p)
 			}
 			else
 			{
+				stream->rx_pend = true;
+				vsfhal_usart_rx_disable(stream->index);
 				break;
 			}
 		}
@@ -92,6 +94,16 @@ static void uart_on_stream_in(void *p)
 	}
 }
 
+static void uart_on_stream_out(void *p)
+{
+	struct usart_stream_t *stream = (struct usart_stream_t *)p;
+	if (stream->rx_pend)
+	{
+		stream->rx_pend = false;
+		vsfhal_usart_rx_enable(stream->index);
+	}
+}
+
 vsf_err_t usart_stream_config(struct usart_stream_t *usart_stream)
 {
 	return vsfhal_usart_config(usart_stream->index, usart_stream->baudrate,
@@ -104,6 +116,7 @@ vsf_err_t usart_stream_init(struct usart_stream_t *usart_stream)
 		return VSFERR_FAIL;
 
 	usart_stream->txing = false;
+	usart_stream->rx_pend = false;
 	if (usart_stream->stream_tx)
 	{
 		stream_init(usart_stream->stream_tx);
@@ -117,7 +130,7 @@ vsf_err_t usart_stream_init(struct usart_stream_t *usart_stream)
 	{
 		stream_init(usart_stream->stream_rx);
 		usart_stream->stream_rx->callback_tx.param = usart_stream;
-		usart_stream->stream_rx->callback_tx.on_inout = NULL;
+		usart_stream->stream_rx->callback_tx.on_inout = uart_on_stream_out;
 		usart_stream->stream_rx->callback_tx.on_connect = NULL;
 		usart_stream->stream_rx->callback_tx.on_disconnect = NULL;
 		stream_connect_tx(usart_stream->stream_rx);

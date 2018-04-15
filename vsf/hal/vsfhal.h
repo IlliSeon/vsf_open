@@ -98,6 +98,8 @@ uint16_t vsfhal_usart_tx_get_free_size(vsfhal_usart_t index);
 uint16_t vsfhal_usart_rx_bytes(vsfhal_usart_t index, uint8_t *data, uint16_t size);
 uint16_t vsfhal_usart_rx_get_data_size(vsfhal_usart_t index);
 uint16_t vsfhal_usart_rx_get_free_size(vsfhal_usart_t index);
+vsf_err_t vsfhal_usart_rx_enable(vsfhal_usart_t index);
+vsf_err_t vsfhal_usart_rx_disable(vsfhal_usart_t index);
 
 /*******************************************************************************
 GPIO

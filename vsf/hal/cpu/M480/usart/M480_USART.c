@@ -192,7 +192,7 @@ vsf_err_t vsfhal_usart_config(vsfhal_usart_t index, uint32_t baudrate, uint32_t 
 
 		usart->BAUD = UART_BAUD_BAUDM0_Msk | UART_BAUD_BAUDM1_Msk | brd;
 	}
-	usart->INTEN = UART_INTEN_RDAIEN_Msk | UART_INTEN_RXTOIEN_Msk | UART_INTEN_TOCNTEN_Msk;
+	vsfhal_usart_rx_enable(uart_idx);
 
 	NVIC_EnableIRQ((IRQn_Type)uart_regparam->irqn);
 	return VSFERR_NONE;
@@ -273,6 +273,22 @@ uint16_t vsfhal_usart_rx_get_free_size(vsfhal_usart_t index)
 {
 	uint32_t fifo_len = 16;
 	return fifo_len - vsfhal_usart_rx_get_data_size(index);
+}
+
+vsf_err_t vsfhal_usart_rx_enable(vsfhal_usart_t index)
+{
+	uint8_t uart_idx = (uint8_t)(index & M480_USART_IDX_MASK);
+	UART_T *usart = (UART_T *)(UART0_BASE + (uart_idx << 12));
+	usart->INTEN |= UART_INTEN_RDAIEN_Msk | UART_INTEN_RXTOIEN_Msk | UART_INTEN_TOCNTEN_Msk;
+	return VSFERR_NONE;
+}
+
+vsf_err_t vsfhal_usart_rx_disable(vsfhal_usart_t index)
+{
+	uint8_t uart_idx = (uint8_t)(index & M480_USART_IDX_MASK);
+	UART_T *usart = (UART_T *)(UART0_BASE + (uart_idx << 12));
+	usart->INTEN &= ~(UART_INTEN_RDAIEN_Msk | UART_INTEN_RXTOIEN_Msk | UART_INTEN_TOCNTEN_Msk);
+	return VSFERR_NONE;
 }
 
 static void uart_handler(vsfhal_usart_t index)
