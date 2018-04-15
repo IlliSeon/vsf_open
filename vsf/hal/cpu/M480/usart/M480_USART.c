@@ -3,23 +3,24 @@
 
 #define VSFHAL_USART_NUM			6
 
-#define M480_REGCFG_UART(uart_idx, DIVMSK, SELMSK, APBMSK, RSTMSK, IRQN)	\
-	[uart_idx] = {.divmsk = (DIVMSK), .selmsk = (SELMSK), .apbmsk = (APBMSK), .rstmsk = (RSTMSK), .irqn = (IRQN)}
+#define M480_REGCFG_UART(uart_idx, DIVREG, SELREG, DIVPOS, SELPOS, APBMSK, IRQN)	\
+	[uart_idx] = {.divreg = (DIVREG), .selreg = (SELREG), .divpos = (DIVPOS), .selpos = (SELPOS), .apbmsk = (APBMSK), .irqn = (IRQN)}
 struct M480_uart_t
 {
-	uint32_t divmsk;
-	uint32_t selmsk;
+	volatile uint32_t *divreg;
+	volatile uint32_t *selreg;
 	uint32_t apbmsk;
-	uint32_t rstmsk;
+	uint8_t divpos;
+	uint8_t selpos;
 	uint8_t irqn;
 } static const M480_uart[VSFHAL_USART_NUM] =
 {
-	M480_REGCFG_UART(0, CLK_CLKDIV0_UART0DIV_Msk, CLK_CLKSEL1_UART0SEL_Msk, CLK_APBCLK0_UART0CKEN_Msk, SYS_IPRST1_UART0RST_Msk, UART0_IRQn),
-	M480_REGCFG_UART(1, CLK_CLKDIV0_UART1DIV_Msk, CLK_CLKSEL1_UART1SEL_Msk, CLK_APBCLK0_UART1CKEN_Msk, SYS_IPRST1_UART1RST_Msk, UART1_IRQn),
-	M480_REGCFG_UART(2, CLK_CLKDIV4_UART2DIV_Msk, CLK_CLKSEL3_UART2SEL_Msk, CLK_APBCLK0_UART2CKEN_Msk, SYS_IPRST1_UART2RST_Msk, UART2_IRQn),
-	M480_REGCFG_UART(3, CLK_CLKDIV4_UART3DIV_Msk, CLK_CLKSEL3_UART3SEL_Msk, CLK_APBCLK0_UART3CKEN_Msk, SYS_IPRST1_UART3RST_Msk, UART3_IRQn),
-	M480_REGCFG_UART(4, CLK_CLKDIV4_UART4DIV_Msk, CLK_CLKSEL3_UART4SEL_Msk, CLK_APBCLK0_UART4CKEN_Msk, SYS_IPRST1_UART4RST_Msk, UART4_IRQn),
-	M480_REGCFG_UART(5, CLK_CLKDIV4_UART5DIV_Msk, CLK_CLKSEL3_UART5SEL_Msk, CLK_APBCLK0_UART5CKEN_Msk, SYS_IPRST1_UART5RST_Msk, UART5_IRQn),
+	M480_REGCFG_UART(0, &CLK->CLKDIV0, &CLK->CLKSEL1, CLK_CLKDIV0_UART0DIV_Pos, CLK_CLKSEL1_UART0SEL_Pos, CLK_APBCLK0_UART0CKEN_Msk, UART0_IRQn),
+	M480_REGCFG_UART(1, &CLK->CLKDIV0, &CLK->CLKSEL1, CLK_CLKDIV0_UART1DIV_Pos, CLK_CLKSEL1_UART1SEL_Pos, CLK_APBCLK0_UART1CKEN_Msk, UART1_IRQn),
+	M480_REGCFG_UART(2, &CLK->CLKDIV4, &CLK->CLKSEL3, CLK_CLKDIV4_UART2DIV_Pos, CLK_CLKSEL3_UART2SEL_Pos, CLK_APBCLK0_UART2CKEN_Msk, UART2_IRQn),
+	M480_REGCFG_UART(3, &CLK->CLKDIV4, &CLK->CLKSEL3, CLK_CLKDIV4_UART3DIV_Pos, CLK_CLKSEL3_UART3SEL_Pos, CLK_APBCLK0_UART3CKEN_Msk, UART3_IRQn),
+	M480_REGCFG_UART(4, &CLK->CLKDIV4, &CLK->CLKSEL3, CLK_CLKDIV4_UART4DIV_Pos, CLK_CLKSEL3_UART4SEL_Pos, CLK_APBCLK0_UART4CKEN_Msk, UART4_IRQn),
+	M480_REGCFG_UART(5, &CLK->CLKDIV4, &CLK->CLKSEL3, CLK_CLKDIV4_UART5DIV_Pos, CLK_CLKSEL3_UART5SEL_Pos, CLK_APBCLK0_UART5CKEN_Msk, UART5_IRQn),
 };
 
 #define UART_IS_RX_READY(uart)		((uart->FIFOSTS & UART_FIFOSTS_RXEMPTY_Msk) >> UART_FIFOSTS_RXEMPTY_Pos)
@@ -74,26 +75,16 @@ vsf_err_t vsfhal_usart_init(vsfhal_usart_t index)
 	uint8_t i;
 	uint16_t remap;
 
-	if(uart_idx > 5)
+	if(uart_idx >= dimof(M480_uart))
 	{
 		return VSFERR_NOT_SUPPORT;
 	}
-	else if(uart_idx <= 1)
-	{
-		CLK->CLKDIV0 &= ~uart_regparam->divmsk;
-		CLK->CLKSEL1 &= ~uart_regparam->selmsk;
-		CLK->APBCLK0 |= uart_regparam->apbmsk;
-		SYS->IPRST1 |= uart_regparam->rstmsk;
-		SYS->IPRST1 &= ~uart_regparam->rstmsk;
-	}
-	else
-	{
-		CLK->CLKDIV4 &= ~uart_regparam->divmsk;
-		CLK->CLKSEL3 &= ~uart_regparam->selmsk;
-		CLK->APBCLK0 |= uart_regparam->apbmsk;
-		SYS->IPRST1 |= uart_regparam->rstmsk;
-		SYS->IPRST1 &= ~uart_regparam->rstmsk;
-	}
+
+	*uart_regparam->divreg &= ~(0x0F << uart_regparam->divpos);
+	*uart_regparam->selreg &= ~(0x03 << uart_regparam->selpos);
+	CLK->APBCLK0 |= uart_regparam->apbmsk;
+	SYS->IPRST1 |= uart_regparam->apbmsk;
+	SYS->IPRST1 &= ~uart_regparam->apbmsk;
 
 	index >>= M480_USART_IDX;
 	for(i = 0; i < M480_UART_PINNUM; i++)
@@ -111,7 +102,7 @@ vsf_err_t vsfhal_usart_init(vsfhal_usart_t index)
 				return err;
 			}
 		}
-	}	
+	}
 	return VSFERR_NONE;
 }
 
@@ -120,7 +111,7 @@ vsf_err_t vsfhal_usart_fini(vsfhal_usart_t index)
 	uint8_t uart_idx = (uint8_t)(index & M480_USART_IDX_MASK);
 	const struct M480_uart_t *uart_regparam = &M480_uart[uart_idx];
 
-	if(uart_idx > 5)
+	if(uart_idx >= dimof(M480_uart))
 	{
 		return VSFERR_NOT_SUPPORT;
 	}
@@ -129,13 +120,39 @@ vsf_err_t vsfhal_usart_fini(vsfhal_usart_t index)
 	return VSFERR_NONE;
 }
 
+static int32_t vsfhal_usart_clock(uint32_t hclk, uint32_t uart_clk, uint32_t baudrate)
+{
+	int32_t brd = 0;
+	uint32_t n;
+	int32_t error;
+
+	brd = uart_clk / baudrate;
+	if (brd < 2)
+		return -1;
+	brd -= 2;
+
+	n = uart_clk / hclk;
+	if (n)
+		n = 3 * n - 1;
+	n = max(9, n);
+	if ((brd < n) || (brd > 0xFFFF))
+		return -1;
+
+	error = (uart_clk / (brd + 2)) * 1000 / baudrate;
+	error -= 1000;
+	if ((error > 20) || ((error < -20)))
+		return -1;
+
+	return brd;
+}
+
 vsf_err_t vsfhal_usart_config(vsfhal_usart_t index, uint32_t baudrate, uint32_t mode)
 {
 	uint8_t uart_idx = (uint8_t)(index & M480_USART_IDX_MASK);
 	const struct M480_uart_t *uart_regparam = &M480_uart[uart_idx];
 	UART_T *usart = (UART_T *)(UART0_BASE + (uart_idx << 12));
-	uint32_t baud_div = 0, reg_line = 0;
 	struct vsfhal_info_t *info;
+	uint32_t reg_line = 0;
 
 	// mode:
 	// bit0 - bit1: parity
@@ -156,16 +173,24 @@ vsf_err_t vsfhal_usart_config(vsfhal_usart_t index, uint32_t baudrate, uint32_t 
 
 	if(baudrate != 0)
 	{
-		int32_t error;
-		baud_div = info->osc_freq_hz / baudrate;
-		if ((baud_div < 11) || (baud_div > (0xffff + 2)))
-			return VSFERR_INVALID_PARAMETER;
-		error = (info->osc_freq_hz / baud_div) * 1000 / baudrate;
-		error -= 1000;
-		if ((error > 20) || ((error < -20)))
-			return VSFERR_INVALID_PARAMETER;
-		if (info->osc_freq_hz * 1000 / baud_div / baudrate)
-		usart->BAUD = UART_BAUD_BAUDM0_Msk | UART_BAUD_BAUDM1_Msk | (baud_div - 2);
+		int32_t brd;
+
+		*uart_regparam->selreg &= ~(0x03 << uart_regparam->selpos);
+		brd = vsfhal_usart_clock(info->hclk_freq_hz, info->osc_freq_hz, baudrate);
+		if (brd < 0)
+		{
+			brd = vsfhal_usart_clock(info->hclk_freq_hz, info->pll_freq_hz, baudrate);
+			if (brd >= 0)
+			{
+				*uart_regparam->selreg |= 0x01 << uart_regparam->selpos;
+			}
+			else
+			{
+				return VSFERR_INVALID_PARAMETER;
+			}
+		}
+
+		usart->BAUD = UART_BAUD_BAUDM0_Msk | UART_BAUD_BAUDM1_Msk | brd;
 	}
 	usart->INTEN = UART_INTEN_RDAIEN_Msk | UART_INTEN_RXTOIEN_Msk | UART_INTEN_TOCNTEN_Msk;
 
@@ -240,14 +265,8 @@ uint16_t vsfhal_usart_rx_get_data_size(vsfhal_usart_t index)
 	UART_T *usart = (UART_T *)(UART0_BASE + (uart_idx << 12));
 	uint32_t fifo_len = 16;
 
-	if (usart->FIFOSTS & UART_FIFOSTS_RXFULL_Msk)
-	{
-		return fifo_len;
-	}
-	else
-	{
-		return (usart->FIFOSTS & UART_FIFOSTS_RXPTR_Msk) >> UART_FIFOSTS_RXPTR_Pos;
-	}
+	return (usart->FIFOSTS & UART_FIFOSTS_RXFULL_Msk) ? fifo_len :
+		((usart->FIFOSTS & UART_FIFOSTS_RXPTR_Msk) >> UART_FIFOSTS_RXPTR_Pos);
 }
 
 uint16_t vsfhal_usart_rx_get_free_size(vsfhal_usart_t index)
