@@ -1970,6 +1970,15 @@
       </file>
     </group>
     <group>
+      <name>stepbystep</name>
+      <group>
+        <name>step0_printf</name>
+        <file>
+          <name>$PROJ_DIR$\..\..\usrapp\stepbystep\step0_printf\usrapp.c</name>
+        </file>
+      </group>
+    </group>
+    <group>
       <name>usbcdc</name>
       <file>
         <name>$PROJ_DIR$\..\..\usrapp\usbcdc\usrapp.c</name>
