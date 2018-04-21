@@ -663,7 +663,7 @@ static vsf_err_t vsfusbh_parse_config(struct vsfusbh_t *usbh,
 	return claiming > 0 ? VSFERR_NONE : VSFERR_FAIL;
 }
 
-vsf_err_t vsfusbh_probe_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
+static vsf_err_t vsfusbh_probe_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 {
 	struct vsfusbh_t *usbh = (struct vsfusbh_t *)pt->user_data;
 	struct vsfhcd_urb_t *probe_urb = usbh->probe_urb;

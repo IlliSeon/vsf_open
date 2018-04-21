@@ -291,7 +291,7 @@ vsf_err_t vsfhal_usart_rx_disable(vsfhal_usart_t index)
 	return VSFERR_NONE;
 }
 
-static void uart_handler(vsfhal_usart_t index)
+static void uart_handler(uint8_t index)
 {
 	uint8_t uart_idx = (uint8_t)(index & M480_USART_IDX_MASK);
 	UART_T *usart = (UART_T *)(UART0_BASE + (uart_idx << 12));

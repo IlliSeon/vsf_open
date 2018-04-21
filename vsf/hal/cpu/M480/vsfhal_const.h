@@ -42,8 +42,8 @@
 #define VSFHAL_GPIO_INPUT					(0x0ul << 0)
 #define VSFHAL_GPIO_OUTPP					(0x1ul << 0)
 #define VSFHAL_GPIO_OUTOD					(0x2ul << 0)
-#define VSFHAL_GPIO_PULLUP					(0x0ul << 4)
-#define VSFHAL_GPIO_PULLDOWN				(0x1ul << 4)
+#define VSFHAL_GPIO_PULLUP					(0x1ul << 4)
+#define VSFHAL_GPIO_PULLDOWN				(0x2ul << 4)
 
 // I2C
 #define vsfhal_i2c_t						uint32_t
@@ -61,6 +61,9 @@
 #define VSFHAL_SPI_MODE3					(SPI_CTL_CLKPOL_Msk | SPI_CTL_TXNEG_Msk)
 #define VSFHAL_SPI_MSB_FIRST				0x00
 #define VSFHAL_SPI_LSB_FIRST				(SPI_CTL_LSB_Msk)
+
+// SDIO
+#define vsfhal_sdio_t						uint64_t
 
 // USBD
 #define VSFHAL_HAS_USBD

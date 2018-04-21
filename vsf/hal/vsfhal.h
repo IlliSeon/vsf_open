@@ -148,6 +148,48 @@ vsf_err_t vsfhal_spi_start(uint8_t index, uint8_t *out, uint8_t *in,
 uint32_t vsfhal_spi_stop(uint8_t index);
 
 /*******************************************************************************
+SDIO
+*******************************************************************************/
+#define VSFHAL_SDIO_WRITE_NORESP		0
+#define VSFHAL_SDIO_WRITE_SHORTRESP		0x40
+#define VSFHAL_SDIO_WRITE_LONGRESP		0x80
+#define VSFHAL_SDIO_READ_SHORTRESP		0xC0
+
+#define VSFHAL_SDIO_RESP_NONE			0
+#define VSFHAL_SDIO_RESP_SHORT			1
+#define VSFHAL_SDIO_RESP_LONG			2
+
+struct vsfhal_sdio_trans_t
+{
+	uint8_t need_resp : 1;
+	uint8_t long_resp : 1;
+	uint8_t r0w1 : 1;
+	uint8_t stop : 1;
+
+	uint8_t crc7_error : 1;
+	uint8_t crc16_error : 1;
+	uint8_t timeout_error : 1;
+	uint8_t unknown_error : 1;
+
+	uint8_t block_cnt;
+	uint16_t block_len;
+	void *buffer;
+
+	uint32_t resp[2];
+};
+
+vsf_err_t vsfhal_sdio_init(vsfhal_sdio_t index);
+vsf_err_t vsfhal_sdio_fini(vsfhal_sdio_t index);
+vsf_err_t vsfhal_sdio_config(vsfhal_sdio_t index, uint32_t kHz,
+		uint8_t buswidth, void (*callback)(void *), void *param);
+vsf_err_t vsfhal_sdio_start(vsfhal_sdio_t index, uint8_t cmd, uint32_t arg,
+		struct vsfhal_sdio_trans_t *trans);
+vsf_err_t vsfhal_sdio_stop(vsfhal_sdio_t index);
+vsf_err_t vsfhal_sdio_config_d1int(vsfhal_sdio_t index,
+		void (*callback)(void *param), void *param);
+vsf_err_t vsfhal_sdio_enable_d1int(vsfhal_sdio_t index);
+
+/*******************************************************************************
 PWM
 *******************************************************************************/
 vsf_err_t vsfhal_pwm_init(uint32_t index);

@@ -419,7 +419,7 @@ static const struct vsfile_memop_t usrapp_vsfile_memop =
 	.free_vfs = usrapp_vsfile_free_vfs,
 };
 
-void usrapp_net_on_connect(void *param, struct vsfip_netif_t *netif)
+static void usrapp_net_on_connect(void *param, struct vsfip_netif_t *netif)
 {
 	struct usrapp_t *app = (struct usrapp_t *)param;
 	vsfip_dhcpc_start(netif, &app->vsfip.dhcpc);

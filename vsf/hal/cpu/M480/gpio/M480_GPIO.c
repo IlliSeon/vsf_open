@@ -44,7 +44,8 @@ vsf_err_t vsfhal_gpio_fini(uint8_t index)
 vsf_err_t vsfhal_gpio_config(uint8_t index, uint8_t pin_idx, uint32_t mode)
 {
 	GPIO_T *gpio;
-	uint32_t tmpreg = mode & 0x03;
+	uint8_t mode_reg = mode & 0x03, pusel_reg = mode >> 4;
+
 #if __VSF_DEBUG__
 	if ((index >= M480_GPIO_NUM) || (pin_idx >= 32))
 	{
@@ -52,9 +53,11 @@ vsf_err_t vsfhal_gpio_config(uint8_t index, uint8_t pin_idx, uint32_t mode)
 	}
 #endif
 	
-	gpio = (GPIO_T *)(GPIOA_BASE + (0x40*index));
+	gpio = (GPIO_T *)(GPIOA_BASE + ((uint32_t)index << 6));
 	gpio->MODE = (gpio->MODE & ~(((uint32_t)0x03) << (pin_idx << 1))) |
-						tmpreg << (pin_idx << 1);
+						mode_reg << (pin_idx << 1);
+	gpio->PUSEL = (gpio->PUSEL & ~(((uint32_t)0x03) << (pin_idx << 1))) |
+						pusel_reg << (pin_idx << 1);
 	gpio->DINOFF &= ~(0x100UL << pin_idx);
 	
 	return VSFERR_NONE;
