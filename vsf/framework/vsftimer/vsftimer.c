@@ -57,30 +57,24 @@ void vsftimer_enqueue(struct vsftimer_t *timer)
 {
 	timer->node.addr = timer->interval + vsfhal_tickclk_get_ms();
 	vsftimer_dequeue(timer);
-#ifdef VSFCFG_THREAD_SAFTY
-	uint8_t origlevel = vsfhal_core_set_intlevel(VSFCFG_MAX_SRT_PRIO);
-#endif
+
+	uint8_t origlevel = vsfsm_sched_lock();
 	vsfq_enqueue(&vsftimer.timerlist, &timer->node);
-#ifdef VSFCFG_THREAD_SAFTY
-	vsfhal_core_set_intlevel(origlevel);
-#endif
+	vsfsm_sched_unlock(origlevel);
 }
 
 void vsftimer_dequeue(struct vsftimer_t *timer)
 {
-#ifdef VSFCFG_THREAD_SAFTY
-	uint8_t origlevel = vsfhal_core_set_intlevel(VSFCFG_MAX_SRT_PRIO);
-#endif
+	uint8_t origlevel = vsfsm_sched_lock();
 	vsfq_remove(&vsftimer.timerlist, &timer->node);
-#ifdef VSFCFG_THREAD_SAFTY
-	vsfhal_core_set_intlevel(origlevel);
-#endif
+	vsfsm_sched_unlock(origlevel);
 }
 
 static struct vsfsm_state_t *
 vsftimer_init_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 {
 	uint32_t cur_tick = vsfhal_tickclk_get_ms();
+	struct vsftimer_notifier_t notifier;
 	struct vsftimer_t *timer;
 
 	switch (evt)
@@ -95,6 +89,7 @@ vsftimer_init_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 				{
 					timer->trigger_cnt--;
 				}
+				notifier = timer->notifier;
 				if (timer->trigger_cnt != 0)
 				{
 					vsftimer_enqueue(timer);
@@ -104,20 +99,21 @@ vsftimer_init_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 					vsftimer_free(timer);
 				}
 
-				if (timer->evt != VSFSM_EVT_INVALID)
+				if (notifier.evt != VSFSM_EVT_INVALID)
 				{
-					if (timer->sm != NULL)
+					if (notifier.sm != NULL)
 					{
-						vsfsm_post_evt(timer->sm, timer->evt);
+						vsfsm_post_evt(notifier.sm, notifier.evt);
 					}
 				}
 				else
 				{
-					if (timer->cb != NULL)
+					if (notifier.cb != NULL)
 					{
-						timer->cb(timer->param);
+						notifier.cb(notifier.param);
 					}
 				}
+
 				timer = (struct vsftimer_t *)vsftimer.timerlist.head;
 			}
 			else
@@ -133,21 +129,18 @@ vsftimer_init_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 struct vsftimer_t *vsftimer_create_cb(uint32_t interval, int16_t trigger_cnt,
 									void (*cb)(void *), void *param)
 {
-#ifdef VSFCFG_THREAD_SAFTY
-	uint8_t origlevel = vsfhal_core_set_intlevel(VSFCFG_MAX_SRT_PRIO);
-#endif
+	uint8_t origlevel = vsfsm_sched_lock();
 	struct vsftimer_t *timer = vsftimer_allocate();
-#ifdef VSFCFG_THREAD_SAFTY
-	vsfhal_core_set_intlevel(origlevel);
-#endif
+	vsfsm_sched_unlock(origlevel);
+
 	if (NULL == timer)
 	{
 		return NULL;
 	}
 
-	timer->evt = VSFSM_EVT_INVALID;
-	timer->cb = cb;
-	timer->param = param;
+	timer->notifier.evt = VSFSM_EVT_INVALID;
+	timer->notifier.cb = cb;
+	timer->notifier.param = param;
 	timer->interval = interval;
 	timer->trigger_cnt = trigger_cnt;
 	vsftimer_enqueue(timer);
@@ -157,20 +150,17 @@ struct vsftimer_t *vsftimer_create_cb(uint32_t interval, int16_t trigger_cnt,
 struct vsftimer_t *vsftimer_create(struct vsfsm_t *sm, uint32_t interval,
 									int16_t trigger_cnt, vsfsm_evt_t evt)
 {
-#ifdef VSFCFG_THREAD_SAFTY
-	uint8_t origlevel = vsfhal_core_set_intlevel(VSFCFG_MAX_SRT_PRIO);
-#endif
+	uint8_t origlevel = vsfsm_sched_lock();
 	struct vsftimer_t *timer = vsftimer_allocate();
-#ifdef VSFCFG_THREAD_SAFTY
-	vsfhal_core_set_intlevel(origlevel);
-#endif
+	vsfsm_sched_unlock(origlevel);
+
 	if (NULL == timer)
 	{
 		return NULL;
 	}
 
-	timer->sm = sm;
-	timer->evt = evt;
+	timer->notifier.sm = sm;
+	timer->notifier.evt = evt;
 	timer->interval = interval;
 	timer->trigger_cnt = trigger_cnt;
 	vsftimer_enqueue(timer);
@@ -180,32 +170,25 @@ struct vsftimer_t *vsftimer_create(struct vsfsm_t *sm, uint32_t interval,
 void vsftimer_free(struct vsftimer_t *timer)
 {
 	vsftimer_dequeue(timer);
-#ifdef VSFCFG_THREAD_SAFTY
-	uint8_t origlevel = vsfhal_core_set_intlevel(VSFCFG_MAX_SRT_PRIO);
-#endif
+
+	uint8_t origlevel = vsfsm_sched_lock();
 	vsftimer.mem_op->free(timer);
-#ifdef VSFCFG_THREAD_SAFTY
-	vsfhal_core_set_intlevel(origlevel);
-#endif
+	vsfsm_sched_unlock(origlevel);
 }
 
 void vsftimer_clean_sm(struct vsfsm_t *sm)
 {
-#ifdef VSFCFG_THREAD_SAFTY
-	uint8_t origlevel = vsfhal_core_set_intlevel(VSFCFG_MAX_SRT_PRIO);
-#endif
+	uint8_t origlevel = vsfsm_sched_lock();
 	struct vsftimer_t *timer = (struct vsftimer_t *)vsftimer.timerlist.head;
 	struct vsftimer_t *timer_next;
 	
 	while (timer != NULL)
 	{
 		timer_next = container_of(timer->node.next, struct vsftimer_t, node);
-		if (sm && (timer->sm == sm))
+		if (sm && (timer->notifier.sm == sm))
 			vsftimer_free(timer);
 		timer = timer_next;
 	}
-#ifdef VSFCFG_THREAD_SAFTY
-	vsfhal_core_set_intlevel(origlevel);
-#endif
+	vsfsm_sched_unlock(origlevel);
 }
 

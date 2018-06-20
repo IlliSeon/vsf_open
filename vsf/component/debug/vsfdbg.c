@@ -18,7 +18,6 @@
  ***************************************************************************/
 
 #include "vsf.h"
-#include <stdarg.h>
 #include <stdio.h>
 
 #ifdef VSFCFG_DEBUG
@@ -26,28 +25,36 @@
 static uint8_t vsfdbg_buf[VSFCFG_DEBUG_BUFLEN];
 static struct vsf_stream_t *vsfdbg_stream = NULL;
 
-uint32_t vsfdbg_prints(char *str)
+uint32_t vsfdbg_printr(const char *buff, uint32_t size)
 {
 	uint32_t ret = 0;
 
 	if (vsfdbg_stream != NULL)
 	{
-		struct vsf_buffer_t buffer = {(uint8_t *)str, strlen(str)};
-
-#ifdef VSFCFG_THREAD_SAFTY
-		uint8_t origlevel = vsfhal_core_set_intlevel(VSFCFG_MAX_SRT_PRIO);
-#endif
-		ret = stream_write(vsfdbg_stream, &buffer);
-#ifdef VSFCFG_THREAD_SAFTY
-		vsfhal_core_set_intlevel(origlevel);
-#endif
+		struct vsf_buffer_t buffer = {(uint8_t *)buff, size};
+		uint8_t origlevel = vsfsm_sched_lock();
+		ret = vsfstream_write(vsfdbg_stream, &buffer);
+		vsfsm_sched_unlock(origlevel);
 	}
 	return ret;
 }
 
-#define VSFDBG_LINEBUF_SIZE			128
-uint32_t vsfdbg_printb(uint8_t *buffer, uint32_t len, bool newline)
+uint32_t vsfdbg_prints(char *str)
 {
+	return vsfdbg_printr(str, strlen(str));
+}
+
+#define VSFDBG_LINEBUF_SIZE			128
+uint32_t vsfdbg_printb(void *buffer, uint32_t len, uint32_t data_size,
+		uint32_t data_per_line, bool addr, bool newline)
+{
+	uint8_t *pbuf = (uint8_t *)buffer;
+
+	if (!data_size || (data_size > 4))
+		data_size = 1;
+	if (!data_per_line)
+		data_per_line = len;
+
 	if ((vsfdbg_stream != NULL) && (len > 0))
 	{
 		const char map[16] = "0123456789ABCDEF";
@@ -55,10 +62,24 @@ uint32_t vsfdbg_printb(uint8_t *buffer, uint32_t len, bool newline)
 
 		for (uint32_t i = 0; i < len; i++)
 		{
-			*ptr++ = map[(buffer[i] >> 4) & 0x0F];
-			*ptr++ = map[(buffer[i] >> 0) & 0x0F];
+			if (!(i % data_per_line) && addr)
+			{
+				if (ptr != hex)
+				{
+					*ptr++ = '\0';
+					vsfdbg_printf("%s" VSFCFG_DEBUG_LINEEND, hex);
+					ptr = hex;
+				}
+				vsfdbg_printf("%08X: ", i);
+			}
+
+			for (uint32_t j = 0; j < data_size; j++, pbuf++)
+			{
+				*ptr++ = map[(*pbuf >> 4) & 0x0F];
+				*ptr++ = map[(*pbuf >> 0) & 0x0F];
+			}
 			*ptr++ = ' ';
-			if (((ptr - hex) >= 3 * VSFDBG_LINEBUF_SIZE) || (i >= (len - 1)))
+			if (((ptr - hex) >= 9 * VSFDBG_LINEBUF_SIZE) || (i >= (len - 1)))
 			{
 				*ptr++ = '\0';
 				vsfdbg_prints(hex);
@@ -71,28 +92,27 @@ uint32_t vsfdbg_printb(uint8_t *buffer, uint32_t len, bool newline)
 	return 0;
 }
 
+uint32_t vsfdbg_printf_arg(const char *format, va_list *arg)
+{
+	uint8_t origlevel = vsfsm_sched_lock();
+	uint32_t size = vsnprintf((char *)vsfdbg_buf, VSFCFG_DEBUG_BUFLEN, format, *arg);
+	struct vsf_buffer_t buffer = {vsfdbg_buf, size};
+	size = vsfstream_write(vsfdbg_stream, &buffer);
+	vsfsm_sched_unlock(origlevel);
+
+	return size;
+}
+
 uint32_t vsfdbg_printf(const char *format, ...)
 {
 	uint32_t ret = 0;
 	if (vsfdbg_stream != NULL)
 	{
 		va_list ap;
-		uint32_t size;
-
-#ifdef VSFCFG_THREAD_SAFTY
-		uint8_t origlevel = vsfhal_core_set_intlevel(VSFCFG_MAX_SRT_PRIO);
-#endif
 
 		va_start(ap, format);
-		size = vsnprintf((char *)vsfdbg_buf, VSFCFG_DEBUG_BUFLEN, format, ap);
+		ret = vsfdbg_printf_arg(format, &ap);
 		va_end(ap);
-
-		struct vsf_buffer_t buffer = {vsfdbg_buf, size};
-		ret = stream_write(vsfdbg_stream, &buffer);
-
-#ifdef VSFCFG_THREAD_SAFTY
-		vsfhal_core_set_intlevel(origlevel);
-#endif
 	}
 	return ret;
 }
@@ -101,13 +121,13 @@ void vsfdbg_init(struct vsf_stream_t *stream)
 {
 	vsfdbg_stream = stream;
 	if (vsfdbg_stream)
-		stream_connect_tx(vsfdbg_stream);
+		vsfstream_connect_tx(vsfdbg_stream);
 }
 
 void vsfdbg_fini(void)
 {
 	if (vsfdbg_stream)
-		stream_disconnect_tx(vsfdbg_stream);
+		vsfstream_disconnect_tx(vsfdbg_stream);
 	vsfdbg_stream = NULL;
 }
 

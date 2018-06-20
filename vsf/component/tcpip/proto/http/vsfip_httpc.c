@@ -346,7 +346,7 @@ static vsf_err_t vsfip_httpc_on_connect_stream(struct vsfsm_pt_t *pt,
 	//config on connect rx
 	outstream->callback_tx.param = pt->sm;
 	outstream->callback_tx.on_inout = vsfip_httpc_outstream_onout_int;
-	stream_connect_tx(outstream);
+	vsfstream_connect_tx(outstream);
 
 	return VSFERR_NONE;
 }
@@ -358,12 +358,12 @@ static vsf_err_t vsfip_httpc_on_recv_stream(struct vsfsm_pt_t *pt,
 
 	vsfsm_pt_begin(pt);
 
-	while (stream_get_free_size(outstream) < buf->app.size)
+	while (vsfstream_get_free_size(outstream) < buf->app.size)
 	{
 		vsfsm_pt_wfe(pt, VSFSM_EVT_HTTPC_STREAM_OUT);
 	}
 
-	stream_write(outstream, &buf->app);
+	vsfstream_write(outstream, &buf->app);
 
 	vsfsm_pt_end(pt);
 	return VSFERR_NONE;

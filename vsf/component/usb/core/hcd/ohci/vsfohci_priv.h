@@ -30,7 +30,7 @@
 #define TD_MAX_NUM				64
 #define NUM_INTS				32
 #define MAX_EP_NUM_EACH_DEVICE	8
-#define TD_MAX_NUM_EACH_URB		8
+#define TD_MAX_NUM_EACH_URB		16
 /* Maximum number of root hub ports. */
 #define CONFIG_SYS_USB_OHCI_MAX_ROOT_PORTS 	3
 

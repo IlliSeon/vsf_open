@@ -17,12 +17,12 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef __BUFFER_H_INCLUDED__
-#define __BUFFER_H_INCLUDED__
+#ifndef __VSFBUFFER_H_INCLUDED__
+#define __VSFBUFFER_H_INCLUDED__
 
 #include "vsf_type.h"
 #include "vsf_cfg.h"
-#include "component/fundation/list/list.h"
+#include "component/fundation/list/vsflist.h"
 
 // queue
 struct vsfq_node_t
@@ -153,5 +153,5 @@ void vsfpool_init(struct vsfpool_t *pool);
 void *vsfpool_alloc(struct vsfpool_t *pool);
 bool vsfpool_free(struct vsfpool_t *pool, void *buffer);
 
-#endif	// __BUFFER_H_INCLUDED__
+#endif	// __VSFBUFFER_H_INCLUDED__
 

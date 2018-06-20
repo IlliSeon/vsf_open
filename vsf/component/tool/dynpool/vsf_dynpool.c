@@ -4,7 +4,7 @@
 static void vsf_dynpool_gc_free(struct vsf_dynpool_t *dynpool,
 				struct vsf_dynpool_list_t *p)
 {
-	sllist_remove(&dynpool->head.next, &p->list);
+	vsflist_remove(&dynpool->head.next, &p->list);
 	vsf_bufmgr_free(p);
 	dynpool->cur_pool_num--;
 }
@@ -22,7 +22,6 @@ static struct vsfsm_state_t *
 vsf_dynpool_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 {
 	struct vsf_dynpool_t *dynpool = (struct vsf_dynpool_t *)sm->user_data;
-	struct vsf_dynpool_list_t *p;
 	uint32_t cur_tick;
 
 	switch (evt)
@@ -39,16 +38,14 @@ vsf_dynpool_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		break;
 	case VSFSM_EVT_TIMER:
 		cur_tick = vsfhal_tickclk_get_ms();
-		p = sllist_get_container(dynpool->head.next, struct vsf_dynpool_list_t, list);
-		while (p != NULL)
+		vsflist_foreach(p, dynpool->head.next, struct vsf_dynpool_list_t, list,
 		{
 			if (!p->allocated_num &&
 				((cur_tick - p->gc_tick) > dynpool->gc.poll_ms))
 			{
 				vsf_dynpool_gc_free(dynpool, p);
 			}
-			p = sllist_get_container(p->list.next, struct vsf_dynpool_list_t, list);
-		}
+		});
 		break;
 	}
 	return NULL;
@@ -57,14 +54,9 @@ vsf_dynpool_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 
 vsf_err_t vsf_dynpool_fini(struct vsf_dynpool_t *dynpool)
 {
-	struct vsf_dynpool_list_t *n, *p =
-		sllist_get_container(dynpool->head.next, struct vsf_dynpool_list_t, list);
-
-	while (p != NULL)
+	vsflist_foreach_next(p, n, dynpool->head.next, struct vsf_dynpool_list_t, list)
 	{
-		n = sllist_get_container(p->list.next, struct vsf_dynpool_list_t, list);
 		vsf_bufmgr_free(p);
-		p = n;
 	}
 	return VSFERR_NONE;
 }
@@ -85,20 +77,17 @@ vsf_err_t vsf_dynpool_init(struct vsf_dynpool_t *dynpool)
 
 void *vsf_dynpool_alloc(struct vsf_dynpool_t *dynpool)
 {
-	struct vsf_dynpool_list_t *p =
-		sllist_get_container(dynpool->head.next, struct vsf_dynpool_list_t, list);
+	struct vsf_dynpool_list_t *p = NULL;
+	uint32_t mskarr_num, size;
 	void *buff;
 
-	while (p != NULL)
+	vsflist_foreach(__p, dynpool->head.next, struct vsf_dynpool_list_t, list)
 	{
-		if (p->allocated_num < dynpool->pool_size)
+		if (__p->allocated_num < dynpool->pool_size)
 		{
-		do_allocate:
-			buff = vsfpool_alloc(&p->pool);
-			p->allocated_num++;
-			return buff;
+			p = __p;
+			goto do_allocate;
 		}
-		p = sllist_get_container(p->list.next, struct vsf_dynpool_list_t, list);
 	}
 
 	if (!dynpool->pool_num || (dynpool->pool_num < dynpool->cur_pool_num))
@@ -107,8 +96,8 @@ void *vsf_dynpool_alloc(struct vsf_dynpool_t *dynpool)
 		//	struct vsf_dynpool_list_t
 		//	uint32_t mskarr[]
 		//	n * buffer
-		uint32_t mskarr_num = (dynpool->pool_size + 31) >> 5;
-		uint32_t size = sizeof(struct vsf_dynpool_list_t) +
+		mskarr_num = (dynpool->pool_size + 31) >> 5;
+		size = sizeof(struct vsf_dynpool_list_t) +
 				(mskarr_num << 2) + dynpool->pool_size * dynpool->item_size;
 		p = vsf_bufmgr_malloc(size);
 		if (!p)
@@ -123,17 +112,17 @@ void *vsf_dynpool_alloc(struct vsf_dynpool_t *dynpool)
 
 		p->list.next = dynpool->head.next;
 		dynpool->head.next = &p->list;
-		goto do_allocate;
+	do_allocate:
+		buff = vsfpool_alloc(&p->pool);
+		p->allocated_num++;
+		return buff;
 	}
 	return NULL;
 }
 
 bool vsf_dynpool_free(struct vsf_dynpool_t *dynpool, void *buff)
 {
-	struct vsf_dynpool_list_t *p =
-		sllist_get_container(dynpool->head.next, struct vsf_dynpool_list_t, list);
-
-	while (p != NULL)
+	vsflist_foreach(p, dynpool->head.next, struct vsf_dynpool_list_t, list)
 	{
 		if (vsfpool_free(&p->pool, buff))
 		{
@@ -144,7 +133,6 @@ bool vsf_dynpool_free(struct vsf_dynpool_t *dynpool, void *buff)
 #endif
 			return true;
 		}
-		p = sllist_get_container(p->list.next, struct vsf_dynpool_list_t, list);
 	}
 	return false;
 }

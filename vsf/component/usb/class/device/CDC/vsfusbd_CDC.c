@@ -59,7 +59,7 @@ static void vsfusbd_CDCData_on_in(void *p)
 	struct vsf_stream_t *stream = param->stream_tx;
 	uint32_t size;
 
-	size = stream_get_data_size(stream);
+	size = vsfstream_get_data_size(stream);
 	if (size > 0)
 	{
 		param->IN_transact.data_size = size;
@@ -298,8 +298,8 @@ vsfusbd_CDCData_class_init(uint8_t iface, struct vsfusbd_device_t *device)
 
 void vsfusbd_CDCData_connect(struct vsfusbd_CDC_param_t *param)
 {
-	stream_connect_tx(param->stream_rx);
-	stream_connect_rx(param->stream_tx);
+	vsfstream_connect_tx(param->stream_rx);
+	vsfstream_connect_rx(param->stream_tx);
 }
 
 static vsf_err_t vsfusbd_CDCControl_request_prepare(struct vsfusbd_device_t *device)

@@ -165,7 +165,7 @@ uint32_t vsfhal_tickclk_get_ms(void)
 static char stdout_buff[4 * 1024 + 1];
 static void stdout_stream_init(struct vsf_stream_t *stream)
 {
-	stream_connect_rx(stream);
+	vsfstream_connect_rx(stream);
 }
 
 static uint32_t stdout_stream_write(struct vsf_stream_t *stream,
@@ -226,7 +226,7 @@ static DWORD CALLBACK StdinThreadProc(PVOID pvoid)
 static void stdin_stream_init(struct vsf_stream_t *stream)
 {
 	DWORD dwStdinThreadId;
-	stream_connect_tx(stream);
+	vsfstream_connect_tx(stream);
 	CreateThread(NULL, 0, StdinThreadProc, stream, 0, &dwStdinThreadId);
 }
 

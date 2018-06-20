@@ -17,6 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 #include "vsf.h"
+#include "vsfip_priv.h"
 
 #define VSFIP_TCP_RETRY			3
 #define VSFIP_TCP_ATO			10
@@ -169,51 +170,6 @@ static uint32_t vsfip_bufferlist_len(struct vsfq_t *list)
 	return size;
 }
 
-static void vsfip_socketlist_add(struct vsfip_socket_t **head,
-									struct vsfip_socket_t *socket)
-{
-	if (*head != NULL)
-	{
-		socket->next = *head;
-	}
-	*head = socket;
-}
-
-static bool vsfip_socketlist_remove(struct vsfip_socket_t **head,
-									struct vsfip_socket_t *socket)
-{
-	if (NULL == *head)
-	{
-		return false;
-	}
-	if (*head == socket)
-	{
-		*head = (*head)->next;
-		return true;
-	}
-	else
-	{
-		struct vsfip_socket_t *tmp;
-
-		tmp = *head;
-		while (tmp != NULL)
-		{
-			if (tmp->next == socket)
-			{
-				tmp->next = socket->next;
-				return true;
-			}
-			tmp = tmp->next;
-		}
-	}
-	return false;
-}
-
-void vsfip_set_default_netif(struct vsfip_netif_t *netif)
-{
-	vsfip.netif_default = netif;
-}
-
 vsf_err_t vsfip_netif_add(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 							struct vsfip_netif_t *netif)
 {
@@ -235,13 +191,8 @@ vsf_err_t vsfip_netif_add(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	if (err != 0) return err;
 
 	// add to netif list
-	if (NULL == vsfip.netif_list)
-	{
-		// first netif is set to the default netif
-		vsfip_set_default_netif(netif);
-	}
-	netif->next = vsfip.netif_list;
-	vsfip.netif_list = netif;
+	netif->list.next = vsfip.netif_list.next;
+	vsfip.netif_list.next = &netif->list;
 
 	vsfsm_pt_end(pt);
 	return VSFERR_NONE;
@@ -250,39 +201,25 @@ vsf_err_t vsfip_netif_add(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 vsf_err_t vsfip_netif_remove(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 							struct vsfip_netif_t *netif)
 {
-	struct vsfip_netif_t *netif_tmp = vsfip.netif_list;
-
 	vsfsm_pt_begin(pt);
 
-	if (netif_tmp == netif)
+	if (!vsflist_remove(&vsfip.netif_list.next, &netif->list))
 	{
-		vsfip.netif_list = netif->next;
-		goto remove_netif;
+		netif->init_pt.user_data = netif;
+		netif->init_pt.sm = pt->sm;
+		netif->init_pt.state = 0;
+		vsfsm_pt_entry(pt);
+		return vsfip_netif_fini(&netif->init_pt, evt);
 	}
 
-	while (netif_tmp != NULL)
-	{
-		if (netif_tmp->next == netif)
-		{
-			netif_tmp->next = netif->next;
-
-		remove_netif:
-			netif->init_pt.user_data = netif;
-			netif->init_pt.sm = pt->sm;
-			netif->init_pt.state = 0;
-			vsfsm_pt_entry(pt);
-			return vsfip_netif_fini(&netif->init_pt, evt);
-		}
-		netif_tmp = netif_tmp->next;
-	}
 	vsfsm_pt_end(pt);
 	return VSFERR_NONE;
 }
 
 struct vsfip_netif_t* vsfip_ip_route(struct vsfip_ipaddr_t *addr)
 {
-	// TODO:
-	return vsfip.netif_default;
+	return (vsfip.ip_route != NULL) ? vsfip.ip_route(addr) :
+		vsflist_get_container(vsfip.netif_list.next, struct vsfip_netif_t, list);
 }
 
 static void vsfip_check_buff(struct vsfip_socket_t *socket)
@@ -309,8 +246,8 @@ struct vsfsm_state_t* vsfip_tick(struct vsfsm_t *sm, vsfsm_evt_t evt)
 	switch (evt)
 	{
 	case VSFSM_EVT_INIT:
-		vsfip.tick_timer.evt = VSFIP_EVT_TICK;
-		vsfip.tick_timer.sm = sm;
+		vsfip.tick_timer.notifier.evt = VSFIP_EVT_TICK;
+		vsfip.tick_timer.notifier.sm = sm;
 		vsfip.tick_timer.interval = 1;
 		vsfip.tick_timer.trigger_cnt = -1;
 		vsftimer_enqueue(&vsfip.tick_timer);
@@ -319,34 +256,23 @@ struct vsfsm_state_t* vsfip_tick(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		vsftimer_dequeue(&vsfip.tick_timer);
 		break;
 	case VSFIP_EVT_TICK:
-	{
-		struct vsfip_socket_t *socket;
-		struct vsfip_socket_t *child;
-
 		// remove ip packet in reass if ttl reach 0
 
 		// remove packet in input buf if ttl reach 0
-		socket = vsfip.udpconns;
-		while (socket != NULL)
+		vsflist_foreach(socket, vsfip.udpconns.next, struct vsfip_socket_t, list)
 		{
 			vsfip_check_buff(socket);
-			socket = socket->next;
 		}
-		socket = vsfip.tcpconns;
-		while (socket != NULL)
+		vsflist_foreach(socket, vsfip.tcpconns.next, struct vsfip_socket_t, list)
 		{
-			child = socket->listener.child;
-			while (child != NULL)
+			vsflist_foreach(child, socket->listener.child.next, struct vsfip_socket_t, list)
 			{
 				vsfip_check_buff(child);
 				vsfip_tcp_socket_tick(child);
-				child = child->next;
 			}
 			vsfip_check_buff(socket);
 			vsfip_tcp_socket_tick(socket);
-			socket = socket->next;
 		}
-	}
 		break;
 	}
 	return NULL;
@@ -366,6 +292,7 @@ vsf_err_t vsfip_init(struct vsfip_mem_op_t *mem_op)
 uint16_t vsfip_get_port(enum vsfip_sockproto_t proto)
 {
 	uint16_t port = 0;
+	uint8_t origlevel = vsfsm_sched_lock();
 
 	switch (proto)
 	{
@@ -376,6 +303,7 @@ uint16_t vsfip_get_port(enum vsfip_sockproto_t proto)
 		port = vsfip.udp_port++;
 		break;
 	}
+	vsfsm_sched_unlock(origlevel);
 	return port;
 }
 
@@ -431,15 +359,7 @@ static bool vsfip_ip_ismatch(struct vsfip_ipaddr_t *addr1,
 
 static vsf_err_t vsfip_ip_output_do(struct vsfip_buffer_t *buf)
 {
-	if (vsfip.output_sniffer != NULL)
-	{
-		vsfip.output_sniffer(buf);
-	}
-	else
-	{
-		vsfip_netif_ip_output(buf);
-	}
-	return VSFERR_NONE;
+	return vsfip_netif_ip_output(buf);
 }
 
 static vsf_err_t vsfip_ip4_output(struct vsfip_socket_t *socket);
@@ -508,8 +428,6 @@ release_buf:
 }
 #endif
 
-static void vsfip_udp_input(struct vsfip_buffer_t *buf);
-static void vsfip_tcp_input(struct vsfip_buffer_t *buf);
 static void vsfip_icmp_input(struct vsfip_buffer_t *buf);
 void vsfip_ip4_input(struct vsfip_buffer_t *buf)
 {
@@ -628,6 +546,7 @@ static vsf_err_t vsfip_ip4_output(struct vsfip_socket_t *socket)
 {
 	struct vsfip_ippcb_t *pcb = &socket->pcb.ippcb;
 	vsf_err_t err = VSFERR_NONE;
+	uint8_t origlevel;
 
 	if (pcb->buf->buf.size >
 			(pcb->buf->netif->mtu - sizeof(struct vsfip_ip4head_t)))
@@ -636,7 +555,10 @@ static vsf_err_t vsfip_ip4_output(struct vsfip_socket_t *socket)
 		goto cleanup;
 	}
 
+	origlevel = vsfsm_sched_lock();
 	pcb->id = vsfip.ip_id++;
+	vsfsm_sched_unlock(origlevel);
+
 	err = vsfip_add_ip4head(socket);
 	if (err) goto cleanup;
 
@@ -673,8 +595,8 @@ struct vsfip_socket_t* vsfip_socket(enum vsfip_sockfamilt_t family,
 		memset(socket, 0, sizeof(struct vsfip_socket_t));
 		socket->family = family;
 		socket->protocol = protocol;
-		socket->tx_timer.evt = VSFIP_EVT_SOCKET_TIMEOUT;
-		socket->rx_timer.evt = VSFIP_EVT_SOCKET_TIMEOUT;
+		socket->tx_timer.notifier.evt = VSFIP_EVT_SOCKET_TIMEOUT;
+		socket->rx_timer.notifier.evt = VSFIP_EVT_SOCKET_TIMEOUT;
 		vsfq_init(&socket->inq);
 		vsfq_init(&socket->outq);
 		vsfsm_sem_init(&socket->input_sem, 0, VSFIP_EVT_SOCKET_RECV);
@@ -722,14 +644,16 @@ static struct vsfip_socket_t* vsfip_childsocket(
 		memcpy(&new_socket->local_sockaddr, &father->local_sockaddr,
 					sizeof(struct vsfip_sockaddr_t));
 		new_socket->father = father;
-		vsfip_socketlist_add(&father->listener.child, new_socket);
+		new_socket->list.next = father->listener.child.next;
+		father->listener.child.next = &new_socket->list;
 	}
 	return new_socket;
 }
 
 static vsf_err_t vsfip_free_socket(struct vsfip_socket_t *socket)
 {
-	struct vsfip_socket_t **list;
+	struct vsflist_t *list;
+	uint8_t origlevel = vsfsm_sched_lock();
 
 	if (socket->father != NULL)
 	{
@@ -747,7 +671,8 @@ static vsf_err_t vsfip_free_socket(struct vsfip_socket_t *socket)
 			break;
 		}
 	}
-	vsfip_socketlist_remove(list, socket);
+	vsflist_remove(&list->next, &socket->list);
+	vsfsm_sched_unlock(origlevel);
 
 	// remove pending incoming buffer
 	vsfip_bufferlist_free(&socket->inq);
@@ -784,7 +709,7 @@ vsf_err_t vsfip_close(struct vsfip_socket_t *socket)
 	{
 		struct vsfip_socket_t *father = socket->father;
 
-		if (vsfip_socketlist_remove(&father->listener.child, socket))
+		if (!vsflist_remove(&father->listener.child.next, &socket->list))
 		{
 			father->listener.accepted_num--;
 		}
@@ -808,31 +733,32 @@ void vsfip_socket_cb(struct vsfip_socket_t *socket,
 
 vsf_err_t vsfip_bind(struct vsfip_socket_t *socket, uint16_t port)
 {
-	struct vsfip_socket_t **head, *tmp;
+	struct vsflist_t **head;
+	uint8_t origlevel = vsfsm_sched_lock();
 
 	switch (socket->protocol)
 	{
 	case IPPROTO_UDP:
-		head = &vsfip.udpconns;
+		head = &vsfip.udpconns.next;
 		break;
 	case IPPROTO_TCP:
-		head = &vsfip.tcpconns;
+		head = &vsfip.tcpconns.next;
 		break;
 	}
 
 	// check if port already binded
-	tmp = *head;
-	while (tmp != NULL)
+	vsflist_foreach(__socket, *head, struct vsfip_socket_t, list)
 	{
-		if (tmp->local_sockaddr.sin_port == port)
+		if (__socket->local_sockaddr.sin_port == port)
 		{
+			vsfsm_sched_unlock(origlevel);
 			return VSFERR_FAIL;
 		}
-		tmp = tmp->next;
 	}
 
-	socket->next = *head;
-	*head = socket;
+	socket->list.next = *head;
+	*head = &socket->list;
+	vsfsm_sched_unlock(origlevel);
 	socket->local_sockaddr.sin_port = port;
 	return VSFERR_NONE;
 }
@@ -865,55 +791,53 @@ vsf_err_t vsfip_listen(struct vsfip_socket_t *socket, uint8_t backlog)
 
 // proto common
 // TODO: fix for IPv6
-static void vsfip_proto_input(struct vsfip_socket_t *list,
+static void vsfip_proto_input(struct vsflist_t *list,
 				struct vsfip_buffer_t *buf, struct vsfip_protoport_t *port)
 {
 	struct vsfip_ip4head_t *iphead = buf->iphead.ip4head;
-	struct vsfip_socket_t *socket = list, *child;
 	struct vsfip_sockaddr_t *remote_addr, *local_addr;
 	uint32_t remote_ipaddr = iphead->ipsrc;
+	struct vsfip_socket_t *socket;
 
 	// find the socket
-	while (socket != NULL)
+	vsflist_foreach(__socket, list->next, struct vsfip_socket_t, list)
 	{
-		local_addr = &socket->local_sockaddr;
+		local_addr = &__socket->local_sockaddr;
 		// if port match and
 		// 		local addr is ADDR_ANY or local addr match ipdest in iphead
 		if ((local_addr->sin_port == port->dst) &&
 			(!local_addr->sin_addr.addr.s_addr ||
 				(local_addr->sin_addr.addr.s_addr == iphead->ipdest)))
 		{
-			if (socket->listener.backlog == 0)
+			if (__socket->listener.backlog == 0)
 			{
 				// normal socket
-				remote_addr = &socket->remote_sockaddr;
+				remote_addr = &__socket->remote_sockaddr;
 				if (((remote_addr->sin_addr.addr.s_addr == VSFIP_IPADDR_ANY) ||
 						(remote_addr->sin_addr.addr.s_addr == remote_ipaddr)) &&
 					((0 == remote_addr->sin_port) ||
 						(remote_addr->sin_port == port->src)))
 				{
+					socket = __socket;
 					break;
 				}
 			}
 			else
 			{
 				// listener socket
-				child = socket->listener.child;
-				while (child != NULL)
+				vsflist_foreach(child, __socket->listener.child.next, struct vsfip_socket_t, list)
 				{
 					remote_addr = &child->remote_sockaddr;
 					if ((remote_addr->sin_addr.addr.s_addr == remote_ipaddr) &&
 						(remote_addr->sin_port == port->src))
 					{
-						socket = child;
+						__socket = child;
 						break;
 					}
-					child = child->next;
 				}
 				break;
 			}
 		}
-		socket = socket->next;
 	}
 
 	if ((NULL == socket) || !socket->can_rx)
@@ -947,7 +871,7 @@ static void vsfip_udp_socket_input(struct vsfip_socket_t *socket,
 	}
 }
 
-static void vsfip_udp_input(struct vsfip_buffer_t *buf)
+void vsfip_udp_input(struct vsfip_buffer_t *buf)
 {
 	struct vsfip_udphead_t *udphead = (struct vsfip_udphead_t *)buf->buf.buffer;
 
@@ -959,7 +883,7 @@ static void vsfip_udp_input(struct vsfip_buffer_t *buf)
 
 	buf->app.buffer = buf->buf.buffer + sizeof(struct vsfip_udphead_t);
 	buf->app.size = buf->buf.size - sizeof(struct vsfip_udphead_t);
-	vsfip_proto_input(vsfip.udpconns, buf, &udphead->port);
+	vsfip_proto_input(&vsfip.udpconns, buf, &udphead->port);
 }
 
 static vsf_err_t vsfip_add_udphead(struct vsfip_socket_t *socket,
@@ -995,7 +919,10 @@ vsf_err_t vsfip_udp_async_send(struct vsfip_socket_t *socket,
 	}
 	socket->remote_sockaddr = *sockaddr;
 
-	buf->netif = vsfip_ip_route(&sockaddr->sin_addr);
+	if (NULL == buf->netif)
+	{
+		buf->netif = vsfip_ip_route(&sockaddr->sin_addr);
+	}
 	if (NULL == buf->netif)
 	{
 		err = VSFERR_FAIL;
@@ -1092,8 +1019,8 @@ vsf_err_t vsfip_udp_recv(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	if (socket->rx_timeout_ms)
 	{
 		socket->rx_timer.interval = socket->rx_timeout_ms;
-		socket->rx_timer.sm = pt->sm;
-		socket->rx_timer.evt = VSFIP_EVT_SOCKET_TIMEOUT;
+		socket->rx_timer.notifier.sm = pt->sm;
+		socket->rx_timer.notifier.evt = VSFIP_EVT_SOCKET_TIMEOUT;
 		socket->rx_timer.trigger_cnt = 1;
 		vsftimer_enqueue(&socket->rx_timer);
 	}
@@ -1131,24 +1058,19 @@ vsf_err_t vsfip_udp_recv(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 }
 
 // TCP
-#define VSFIP_TCPFLAG_FIN		(uint16_t)(1 << 0)
-#define VSFIP_TCPFLAG_SYN		(uint16_t)(1 << 1)
-#define VSFIP_TCPFLAG_RST		(uint16_t)(1 << 2)
-#define VSFIP_TCPFLAG_PSH		(uint16_t)(1 << 3)
-#define VSFIP_TCPFLAG_ACK		(uint16_t)(1 << 4)
-#define VSFIP_TCPFLAG_URG		(uint16_t)(1 << 5)
-
 #define VSFIP_TCPOPT_MSS		0x02
 #define VSFIP_TCPOPT_MSS_LEN	0x04
 
 static uint32_t vsfip_get_tsn(void)
 {
+	uint8_t origlevel = vsfsm_sched_lock();
 	uint32_t tsn = vsfip.tsn;
 	vsfip.tsn += 0x10000;
+	vsfsm_sched_unlock(origlevel);
 	return tsn;
 }
 
-static void vsfip_tcp_input(struct vsfip_buffer_t *buf)
+void vsfip_tcp_input(struct vsfip_buffer_t *buf)
 {
 	struct vsfip_tcphead_t *tcphead = (struct vsfip_tcphead_t *)buf->buf.buffer;
 
@@ -1165,7 +1087,7 @@ static void vsfip_tcp_input(struct vsfip_buffer_t *buf)
 	buf->proto_node.addr = tcphead->seq;
 	buf->app.buffer = buf->buf.buffer + tcphead->headlen;
 	buf->app.size = buf->buf.size - tcphead->headlen;
-	vsfip_proto_input(vsfip.tcpconns, buf,&tcphead->port);
+	vsfip_proto_input(&vsfip.tcpconns, buf, &tcphead->port);
 }
 
 static vsf_err_t vsfip_add_tcphead(struct vsfip_socket_t *socket,
@@ -1268,7 +1190,10 @@ static vsf_err_t vsfip_tcp_sendflags(struct vsfip_socket_t *socket,
 	{
 		return VSFERR_NOT_ENOUGH_RESOURCES;
 	}
-	buffer->netif = vsfip_ip_route(&socket->remote_sockaddr.sin_addr);
+	if (NULL == buffer->netif)
+	{
+		buffer->netif = vsfip_ip_route(&socket->remote_sockaddr.sin_addr);
+	}
 	if (NULL == buffer->netif)
 	{
 		return VSFERR_FAIL;
@@ -1765,16 +1690,14 @@ vsfip_tcp_accept_try(struct vsfip_socket_t *socket)
 {
 	struct vsfip_tcppcb_t *pcb;
 
-	socket = socket->listener.child;
-	while (socket != NULL)
+	vsflist_foreach(__socket, socket->listener.child.next, struct vsfip_socket_t, list)
 	{
-		pcb = (struct vsfip_tcppcb_t *)socket->pcb.protopcb;
-		if ((pcb->state == VSFIP_TCPSTAT_ESTABLISHED) && !socket->accepted)
+		pcb = (struct vsfip_tcppcb_t *)__socket->pcb.protopcb;
+		if ((pcb->state == VSFIP_TCPSTAT_ESTABLISHED) && !__socket->accepted)
 		{
-			socket->accepted = true;
-			return socket;
+			__socket->accepted = true;
+			return __socket;
 		}
-		socket = socket->next;
 	}
 	return NULL;
 }
@@ -1853,7 +1776,10 @@ vsf_err_t vsfip_tcp_async_send(struct vsfip_socket_t *socket,
 		return VSFERR_NOT_READY;
 	}
 
-	buf->netif = vsfip_ip_route(&socket->remote_sockaddr.sin_addr);
+	if (NULL == buf->netif)
+	{
+		buf->netif = vsfip_ip_route(&socket->remote_sockaddr.sin_addr);
+	}
 	if (NULL == buf->netif)
 	{
 		return VSFERR_FAIL;

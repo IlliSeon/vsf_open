@@ -17,24 +17,45 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef __LIST_H_INCLUDED__
-#define __LIST_H_INCLUDED__
+#ifndef __VSFBITTOOL_H_INCLUDED__
+#define __VSFBITTOOL_H_INCLUDED__
 
-struct sllist
-{
-	struct sllist *next;
-};
+uint8_t BIT_REVERSE_U8(uint8_t);
+uint16_t BIT_REVERSE_U16(uint16_t);
+uint32_t BIT_REVERSE_U32(uint32_t);
+uint64_t BIT_REVERSE_U64(uint64_t);
 
-#define sllist_init_node(node)			((node).next = NULL)
-#define sllist_insert(node, new)		((node).next = &(new))
-#define sllist_get_container(p, t, m)	container_of(p, t, m)
+// GET_UXX_XXXXXXXX and SET_UXX_XXXXXXXX are align independent
+uint16_t GET_U16_MSBFIRST(uint8_t *p);
+uint32_t GET_U24_MSBFIRST(uint8_t *p);
+uint32_t GET_U32_MSBFIRST(uint8_t *p);
+uint64_t GET_U64_MSBFIRST(uint8_t *p);
+uint16_t GET_U16_LSBFIRST(uint8_t *p);
+uint32_t GET_U24_LSBFIRST(uint8_t *p);
+uint32_t GET_U32_LSBFIRST(uint8_t *p);
+uint64_t GET_U64_LSBFIRST(uint8_t *p);
 
-int sllist_get_length(struct sllist *head);
-int sllist_get_idx(struct sllist *head, struct sllist *node);
-int sllist_is_in(struct sllist *head, struct sllist *node);
-int sllist_remove(struct sllist **head, struct sllist *node);
-void sllist_append(struct sllist *head, struct sllist *new_node);
-void sllist_delete_next(struct sllist *head);
+void SET_U16_MSBFIRST(uint8_t *p, uint16_t v16);
+void SET_U24_MSBFIRST(uint8_t *p, uint32_t v32);
+void SET_U32_MSBFIRST(uint8_t *p, uint32_t v32);
+void SET_U64_MSBFIRST(uint8_t *p, uint64_t v64);
+void SET_U16_LSBFIRST(uint8_t *p, uint16_t v16);
+void SET_U24_LSBFIRST(uint8_t *p, uint32_t v32);
+void SET_U32_LSBFIRST(uint8_t *p, uint32_t v32);
+void SET_U64_LSBFIRST(uint8_t *p, uint64_t v64);
 
-#endif // __LIST_H_INCLUDED__
+uint16_t SWAP_U16(uint16_t);
+uint32_t SWAP_U24(uint32_t);
+uint32_t SWAP_U32(uint32_t);
+uint64_t SWAP_U64(uint64_t);
 
+int msb(uint32_t);
+int ffz(uint32_t);
+
+// mask array
+bool mskarr_get(uint32_t *arr, int bit);
+void mskarr_set(uint32_t *arr, int bit);
+void mskarr_clr(uint32_t *arr, int bit);
+int mskarr_ffz(uint32_t *arr, int arrlen);
+
+#endif // __VSFBITTOOL_H_INCLUDED__

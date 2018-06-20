@@ -63,12 +63,14 @@
 #define VSFHAL_SPI_LSB_FIRST				(SPI_CTL_LSB_Msk)
 
 // SDIO
+#define VSFHAL_HAS_SDIO
 #define vsfhal_sdio_t						uint64_t
 
 // USBD
 #define VSFHAL_HAS_USBD
 
 // OHCI
+#define VSFHAL_HAS_USBH
 #define VSFHAL_HCD_PORT1					(0x1 << 0)
 #define VSFHAL_HCD_PORT2					(0x1 << 1)
 

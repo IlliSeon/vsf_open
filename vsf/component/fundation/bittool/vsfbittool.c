@@ -206,6 +206,11 @@ int ffz(uint32_t a)
 }
 
 // mask array
+bool mskarr_get(uint32_t *arr, int bit)
+{
+	return (arr[bit >> 5] & (1 << (bit & 0x1F))) > 0;
+}
+
 void mskarr_set(uint32_t *arr, int bit)
 {
 	arr[bit >> 5] |= (1 << (bit & 0x1F));

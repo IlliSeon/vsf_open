@@ -29,6 +29,7 @@ enum vsfile_attr_t
 	VSFILE_ATTR_DIRECTORY		= 1 << 4,
 	VSFILE_ATTR_ARCHIVE			= 1 << 5,
 	VSFILE_ATTR_WRITEONLY		= 1 << 6,
+	VSFILE_ATTR_USR				= 1 << 7,
 };
 
 struct vsfile_t;
@@ -125,8 +126,12 @@ struct vsfile_vfsfile_t
 	{
 		struct
 		{
+			void *priv;
+		} f;
+		struct
+		{
 			struct vsfile_vfsfile_t *child;
-		} dir;
+		} d;
 		struct
 		{
 			struct vsfile_fsop_t *op;

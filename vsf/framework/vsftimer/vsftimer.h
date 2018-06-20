@@ -20,7 +20,7 @@
 #ifndef __VSFTIMER_H_INCLUDED__
 #define __VSFTIMER_H_INCLUDED__
 
-#include "component/fundation/buffer/buffer.h"
+#include "component/fundation/buffer/vsfbuffer.h"
 #include "framework/vsfsm/vsfsm.h"
 
 struct vsftimer_t
@@ -28,19 +28,22 @@ struct vsftimer_t
 	// inherent from vsfq_node_t
 	struct vsfq_node_t node;
 	
-	union
+	struct vsftimer_notifier_t
 	{
-		struct
+		union
 		{
-			struct vsfsm_t *sm;
+			struct
+			{
+				struct vsfsm_t *sm;
+			};
+			struct
+			{
+				void (*cb)(void *param);
+				void *param;
+			};
 		};
-		struct
-		{
-			void (*cb)(void *param);
-			void *param;
-		};
-	};
-	vsfsm_evt_t evt;
+		vsfsm_evt_t evt;
+	} notifier;
 	uint32_t interval;
 	int trigger_cnt;
 };

@@ -39,7 +39,7 @@ struct vsfhid_usage_t
 	int32_t report_size;
 	int32_t report_count;
 	uint32_t data_flag;
-	struct sllist list;
+	struct vsflist_t list;
 };
 
 struct vsfhid_event_t
@@ -75,13 +75,13 @@ struct vsfhid_report_t
 	uint16_t generic_usage;
 
 	uint8_t *value;
-	struct sllist usage_list;
-	struct sllist report_list;
+	struct vsflist_t usage_list;
+	struct vsflist_t report_list;
 };
 
 struct vsfhid_dev_t
 {
-	struct sllist report_list;
+	struct vsflist_t report_list;
 	bool report_has_id;
 };
 

@@ -36,7 +36,7 @@ static void uart_on_tx(void *p)
 	buffer.size = min(hw_bufsize, dimof(buf));
 	if (buffer.size)
 	{
-		buffer.size = stream_read(stream->stream_tx, &buffer);
+		buffer.size = vsfstream_read(stream->stream_tx, &buffer);
 		if (buffer.size)
 		{
 			vsfhal_usart_tx_bytes(stream->index, buf, buffer.size);
@@ -65,14 +65,14 @@ static void uart_on_rx(void *p)
 		buffer.size = min(hw_bufsize, dimof(buf));
 		if (buffer.size)
 		{
-			stream_free_size = stream_get_free_size(stream->stream_rx);
+			stream_free_size = vsfstream_get_free_size(stream->stream_rx);
 			buffer.size = min(buffer.size, stream_free_size);
 			if (buffer.size)
 			{
 				hw_bufsize -= buffer.size;
 				buffer.size = vsfhal_usart_rx_bytes(stream->index, buf, buffer.size);
 				buffer.buffer = buf;
-				stream_write(stream->stream_rx, &buffer);
+				vsfstream_write(stream->stream_rx, &buffer);
 			}
 			else
 			{
@@ -119,21 +119,21 @@ vsf_err_t usart_stream_init(struct usart_stream_t *usart_stream)
 	usart_stream->rx_pend = false;
 	if (usart_stream->stream_tx)
 	{
-		stream_init(usart_stream->stream_tx);
+		vsfstream_init(usart_stream->stream_tx);
 		usart_stream->stream_tx->callback_rx.param = usart_stream;
 		usart_stream->stream_tx->callback_rx.on_inout = uart_on_stream_in;
 		usart_stream->stream_tx->callback_rx.on_connect = NULL;
 		usart_stream->stream_tx->callback_rx.on_disconnect = NULL;
-		stream_connect_rx(usart_stream->stream_tx);
+		vsfstream_connect_rx(usart_stream->stream_tx);
 	}
 	if (usart_stream->stream_rx)
 	{
-		stream_init(usart_stream->stream_rx);
+		vsfstream_init(usart_stream->stream_rx);
 		usart_stream->stream_rx->callback_tx.param = usart_stream;
 		usart_stream->stream_rx->callback_tx.on_inout = uart_on_stream_out;
 		usart_stream->stream_rx->callback_tx.on_connect = NULL;
 		usart_stream->stream_rx->callback_tx.on_disconnect = NULL;
-		stream_connect_tx(usart_stream->stream_rx);
+		vsfstream_connect_tx(usart_stream->stream_rx);
 	}
 
 	vsfhal_usart_init(usart_stream->index);

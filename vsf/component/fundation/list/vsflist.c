@@ -18,12 +18,12 @@
  ***************************************************************************/
 
 #include "vsf_type.h"
-#include "list.h"
+#include "vsflist.h"
 
-int sllist_get_length(struct sllist *head)
+int vsflist_get_length(struct vsflist_t *head)
 {
 	int length = 0;
-	while (head != (struct sllist *)0)
+	while (head != NULL)
 	{
 		length++;
 		head = head->next;
@@ -31,10 +31,23 @@ int sllist_get_length(struct sllist *head)
 	return length;
 }
 
-int sllist_get_idx(struct sllist *head, struct sllist *node)
+struct vsflist_t * vsflist_get_node(struct vsflist_t *head, int idx)
+{
+	struct vsflist_t *node = head;
+	int pos = 0;
+	while (node != NULL)
+	{
+		if (pos++ == idx)
+			return node;
+		node = node->next;
+	}
+	return node;
+}
+
+int vsflist_get_idx(struct vsflist_t *head, struct vsflist_t *node)
 {
 	int index = 0;
-	while (head != (struct sllist *)0)
+	while (head != NULL)
 	{
 		if (head == node)
 		{
@@ -46,14 +59,14 @@ int sllist_get_idx(struct sllist *head, struct sllist *node)
 	return -1;
 }
 
-int sllist_is_in(struct sllist *head, struct sllist *node)
+int vsflist_is_in(struct vsflist_t *head, struct vsflist_t *node)
 {
-	return sllist_get_idx(head, node) >= 0;
+	return vsflist_get_idx(head, node) >= 0;
 }
 
-int sllist_remove(struct sllist **head, struct sllist *node)
+int vsflist_remove(struct vsflist_t **head, struct vsflist_t *node)
 {
-	if (!sllist_is_in(*head, node))
+	if (!vsflist_is_in(*head, node))
 	{
 		return -1;
 	}
@@ -63,7 +76,7 @@ int sllist_remove(struct sllist **head, struct sllist *node)
 		*head = node->next;
 		return 0;
 	}
-	while (*head != (struct sllist *)0)
+	while (*head != NULL)
 	{
 		if ((*head)->next == node)
 		{
@@ -75,9 +88,9 @@ int sllist_remove(struct sllist **head, struct sllist *node)
 	return 0;
 }
 
-void sllist_append(struct sllist *head, struct sllist *new_node)
+void vsflist_append(struct vsflist_t *head, struct vsflist_t *new_node)
 {
-	struct sllist *next;
+	struct vsflist_t *next;
 
 	next = head;
 	while (next->next != NULL)
@@ -87,9 +100,9 @@ void sllist_append(struct sllist *head, struct sllist *new_node)
 	new_node->next = NULL;
 }
 
-void sllist_delete_next(struct sllist *head)
+void vsflist_delete_next(struct vsflist_t *head)
 {
-	struct sllist *next;
+	struct vsflist_t *next;
 
 	next = head->next;
 	if (next->next)

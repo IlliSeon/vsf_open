@@ -110,7 +110,7 @@ struct vsfip_netif_t
 		void *ptr;
 	} dhcp;
 
-	struct vsfip_netif_t *next;
+	struct vsflist_t list;
 };
 
 vsf_err_t vsfip_netif_construct(struct vsfip_netif_t *netif);

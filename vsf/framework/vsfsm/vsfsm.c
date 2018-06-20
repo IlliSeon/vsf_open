@@ -19,6 +19,22 @@
 
 #include "vsf.h"
 
+uint8_t vsfsm_sched_lock(void)
+{
+#ifdef VSFCFG_THREAD_SAFTY
+	return vsfhal_core_set_intlevel(VSFCFG_MAX_SRT_PRIO);
+#else
+	return 0;
+#endif
+}
+
+void vsfsm_sched_unlock(uint8_t origlevel)
+{
+#ifdef VSFCFG_THREAD_SAFTY
+	vsfhal_core_set_intlevel(origlevel);
+#endif
+}
+
 #if VSFSM_CFG_PREMPT_EN
 static struct vsfsm_evtq_t *vsfsm_cur_evtq = NULL;
 struct vsfsm_evtq_t* vsfsm_evtq_set(struct vsfsm_evtq_t *queue)
@@ -489,6 +505,7 @@ vsfsm_ljmp_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 			// implement set_stack as a func is risky, may break the stack
 			vsfhal_core_set_stack((uint32_t)ljmp->stack);
 			ljmp->thread(ljmp);
+			vsfsm_ljmp_ret(ljmp);
 		}
 		else
 		{
@@ -580,10 +597,8 @@ static void vsfsm_sync_append_sm(struct vsfsm_sync_t *sync, struct vsfsm_t *sm)
 vsf_err_t vsfsm_sync_cancel(struct vsfsm_sync_t *sync, struct vsfsm_t *sm)
 {
 	struct vsfsm_t *sm_pending;
+	uint8_t origlevel = vsfsm_sched_lock();
 
-#ifdef VSFCFG_THREAD_SAFTY
-	uint8_t origlevel = vsfhal_core_set_intlevel(VSFCFG_MAX_SRT_PRIO);
-#endif
 	if (sync->sm_pending == sm)
 	{
 		sync->sm_pending = sm->pending_next;
@@ -601,26 +616,21 @@ vsf_err_t vsfsm_sync_cancel(struct vsfsm_sync_t *sync, struct vsfsm_t *sm)
 			sm_pending = sm_pending->pending_next;
 		}
 	}
-#ifdef VSFCFG_THREAD_SAFTY
-	vsfhal_core_set_intlevel(origlevel);
-#endif
+	vsfsm_sched_unlock(origlevel);
 	return VSFERR_NONE;
 }
 
 vsf_err_t vsfsm_sync_increase(struct vsfsm_sync_t *sync)
 {
 	struct vsfsm_t *sm;
+	uint8_t origlevel = vsfsm_sched_lock();
 
-#ifdef VSFCFG_THREAD_SAFTY
-	uint8_t origlevel = vsfhal_core_set_intlevel(VSFCFG_MAX_SRT_PRIO);
-#endif
 	if (sync->sm_pending)
 	{
 		sm = sync->sm_pending;
 		sync->sm_pending = sync->sm_pending->pending_next;
-#ifdef VSFCFG_THREAD_SAFTY
-		vsfhal_core_set_intlevel(origlevel);
-#endif
+		vsfsm_sched_unlock(origlevel);
+
 		if (vsfsm_post_evt(sm, sync->evt))
 		{
 			// should increase the evtq buffer size
@@ -630,15 +640,11 @@ vsf_err_t vsfsm_sync_increase(struct vsfsm_sync_t *sync)
 	else if (sync->cur_value < sync->max_value)
 	{
 		sync->cur_value++;
-#ifdef VSFCFG_THREAD_SAFTY
-		vsfhal_core_set_intlevel(origlevel);
-#endif
+		vsfsm_sched_unlock(origlevel);
 	}
 	else
 	{
-#ifdef VSFCFG_THREAD_SAFTY
-		vsfhal_core_set_intlevel(origlevel);
-#endif
+		vsfsm_sched_unlock(origlevel);
 		return VSFERR_BUG;
 	}
 	return VSFERR_NONE;
@@ -646,21 +652,16 @@ vsf_err_t vsfsm_sync_increase(struct vsfsm_sync_t *sync)
 
 vsf_err_t vsfsm_sync_decrease(struct vsfsm_sync_t *sync, struct vsfsm_t *sm)
 {
-#ifdef VSFCFG_THREAD_SAFTY
-	uint8_t origlevel = vsfhal_core_set_intlevel(VSFCFG_MAX_SRT_PRIO);
-#endif
+	uint8_t origlevel = vsfsm_sched_lock();
+
 	if (sync->cur_value > 0)
 	{
 		sync->cur_value--;
-#ifdef VSFCFG_THREAD_SAFTY
-		vsfhal_core_set_intlevel(origlevel);
-#endif
+		vsfsm_sched_unlock(origlevel);
 		return VSFERR_NONE;
 	}
 	vsfsm_sync_append_sm(sync, sm);
-#ifdef VSFCFG_THREAD_SAFTY
-	vsfhal_core_set_intlevel(origlevel);
-#endif
+	vsfsm_sched_unlock(origlevel);
 	return VSFERR_NOT_READY;
 }
 #endif	// VSFSM_CFG_SYNC_EN

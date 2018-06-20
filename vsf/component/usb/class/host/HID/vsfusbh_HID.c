@@ -46,7 +46,7 @@ static vsf_err_t vsfusbh_hid_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	inurb->notifier_sm = &hid->sm;
 	inurb->transfer_length = hid->hid_desc_len;
 	if (hid->hid_desc_len > 1024) return VSFERR_NOT_SUPPORT;
-	inurb->transfer_buffer = vsfusbh_alloc_urb_buffer(inurb, hid->hid_desc_len);
+	vsfusbh_alloc_urb_buffer(inurb, hid->hid_desc_len);
 	if (inurb->transfer_buffer == NULL) return VSFERR_FAIL;
 
 	if (vsfsm_crit_enter(&hid->dev->ep0_crit, &hid->sm))

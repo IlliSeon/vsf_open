@@ -20,6 +20,8 @@
 #ifndef __VSFDBG_H_INCLUDED__
 #define __VSFDBG_H_INCLUDED__
 
+#include <stdarg.h>
+
 #ifndef VSFCFG_DEBUG_LINEEND
 #define VSFCFG_DEBUG_LINEEND		"\r\n"
 #endif
@@ -27,15 +29,20 @@
 #ifdef VSFCFG_DEBUG
 void vsfdbg_init(struct vsf_stream_t *stream);
 void vsfdbg_fini(void);
+uint32_t vsfdbg_printr(const char *buff, uint32_t size);
+uint32_t vsfdbg_printf_arg(const char *format, va_list *arg);
 uint32_t vsfdbg_printf(const char *format, ...);
 uint32_t vsfdbg_prints(char *str);
-uint32_t vsfdbg_printb(uint8_t *buffer, uint32_t len, bool newline);
+uint32_t vsfdbg_printb(void *buffer, uint32_t len, uint32_t data_size,
+		uint32_t data_per_line, bool addr, bool newline);
 #else
-#define vsfdbg_init(s)
-#define vsfdbg_fini()
-#define vsfdbg_printf(format, ...)
-#define vsfdbg_prints(s)
-#define vsfdbg_printb(b, l, n)
+#define vsfdbg_init(...)
+#define vsfdbg_fini(...)
+#define vsfdbg_printr(...)
+#define vsfdbg_printf_arg(...)
+#define vsfdbg_printf(...)
+#define vsfdbg_prints(...)
+#define vsfdbg_printb(...)
 #endif
 
 #endif // __VSFDBG_H_INCLUDED__

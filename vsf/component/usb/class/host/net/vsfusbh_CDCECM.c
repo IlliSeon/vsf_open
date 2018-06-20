@@ -102,7 +102,7 @@ vsfusbh_ecm_in_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		if (urb->status == URB_OK)
 		{
 			vsfdbg_printf("cdc_ecm_input: ");
-			vsfdbg_printb(urb->transfer_buffer, urb->actual_length, true);
+			vsfdbg_printb(urb->transfer_buffer, urb->actual_length, 1, 16, true, true);
 
 			ecm->rx_buffer->netif = &ecm->netif;
 			vsfip_eth_input(ecm->rx_buffer);
@@ -135,39 +135,33 @@ static void vsfusbh_ecm_on_event(struct vsfusbh_ecm_t *ecm)
 	switch (ecm->evt[1])
 	{
 	case 0x00:			// NETWORK_CONNECTION
+	{
+		struct vsfsm_pt_t pt =
+		{
+			.state = 0,
+			.sm = 0,
+			.user_data = &ecm->netif,
+		};
+
 		if (ecm->netif_inited && (ecm->evt[2] == 0))
 		{
-			struct vsfsm_pt_t pt;
-
 			vsfdbg_prints("cdc_ecm_event: NETWORK_CONNECTION Disconnected" VSFCFG_DEBUG_LINEEND);
 
 			// disconnect netif, for ecm netif_remove is non-block
-			pt.state = 0;
-			pt.sm = 0;
-			pt.user_data = &ecm->netif;
 			vsfip_netif_remove(&pt, 0, &ecm->netif);
-			ecm->netif_inited = false;
 			if (vsfusbh_ecm_cb.on_disconnect != NULL)
 				vsfusbh_ecm_cb.on_disconnect(vsfusbh_ecm_cb.param, &ecm->netif);
 		}
 		else if (!ecm->netif_inited && (ecm->evt[2] != 0))
 		{
-			struct vsfsm_pt_t pt;
-
 			vsfdbg_prints("cdc_ecm_event: NETWORK_CONNECTION Connected" VSFCFG_DEBUG_LINEEND);
 
 			// connect netif, for ecm netif_add is non-block
-			pt.state = 0;
-			pt.sm = 0;
-			pt.user_data = &ecm->netif;
-			if (!vsfip_netif_add(&pt, 0, &ecm->netif))
-			{
-				ecm->netif_inited = true;
-				if (vsfusbh_ecm_cb.on_connect != NULL)
-					vsfusbh_ecm_cb.on_connect(vsfusbh_ecm_cb.param, &ecm->netif);
-			}
+			if (!vsfip_netif_add(&pt, 0, &ecm->netif) && (vsfusbh_ecm_cb.on_connect != NULL))
+				vsfusbh_ecm_cb.on_connect(vsfusbh_ecm_cb.param, &ecm->netif);
 		}
 		break;
+	}
 	case 0x2A:			// CONNECTION_SPEED_CHANGE
 //		vsfdbg_prints("cdc_ecm_event: CONNECTION_SPEED_CHANGE" VSFCFG_DEBUG_LINEEND);
 		break;
@@ -278,7 +272,7 @@ vsfusbh_ecm_netdrv_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		urb->transfer_buffer = tmpbuf->buf.buffer;
 		urb->transfer_length = tmpbuf->buf.size;
 		vsfdbg_printf("cdc_ecm_output: ");
-		vsfdbg_printb(urb->transfer_buffer, urb->transfer_length, true);
+		vsfdbg_printb(urb->transfer_buffer, urb->transfer_length, 1, 16, true, true);
 		if (!vsfusbh_submit_urb(ecm->usbh, urb))
 			break;
 	case VSFSM_EVT_URB_COMPLETE:
@@ -298,6 +292,7 @@ static vsf_err_t vsfusbh_ecm_netdrv_init(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	netif->mtu = ecm->max_segment_size - VSFIP_ETH_HEADSIZE;
 	netif->drv->netif_header_size = VSFIP_ETH_HEADSIZE;
 	netif->drv->hwtype = VSFIP_ETH_HWTYPE;
+	ecm->netif_inited = true;
 
 	// start pt to receive output_sem
 	ecm->netdrv_out_sm.init_state.evt_handler = vsfusbh_ecm_netdrv_evt_handler;
@@ -452,6 +447,20 @@ static void vsfusbh_ecm_disconnect(struct vsfusbh_t *usbh,
 		struct vsfusbh_device_t *dev, void *priv)
 {
 	struct vsfusbh_ecm_t *ecm = (struct vsfusbh_ecm_t *)priv;
+
+	if (ecm->netif_inited)
+	{
+		struct vsfsm_pt_t pt =
+		{
+			.state = 0,
+			.sm = 0,
+			.user_data = &ecm->netif,
+		};
+
+		vsfip_netif_remove(&pt, 0, &ecm->netif);
+		if (vsfusbh_ecm_cb.on_disconnect != NULL)
+			vsfusbh_ecm_cb.on_disconnect(vsfusbh_ecm_cb.param, &ecm->netif);
+	}
 
 	vsfusbh_ecm_free_urb(usbh, ecm);
 	vsfsm_fini(&ecm->in_sm);

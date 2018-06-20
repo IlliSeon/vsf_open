@@ -25,7 +25,7 @@ static void vsfusbd_RNDIS_on_tx_finish(void *param)
 						(struct vsfusbd_RNDIS_param_t *)param;
 	struct vsf_bufstream_t *bufstream = &rndis_param->tx_bufstream;
 
-	if (!STREAM_GET_DATA_SIZE(bufstream))
+	if (!VSFSTREAM_GET_DATA_SIZE(bufstream))
 	{
 		struct vsfq_node_t *node = vsfq_dequeue(&rndis_param->netif.outq);
 		struct vsfip_buffer_t *tmpbuf =
@@ -57,7 +57,7 @@ static void vsfusbd_RNDIS_on_tx_finish(void *param)
 			packet->Reserved = 0;
 
 			rndis_param->tx_buffer = tmpbuf;
-			STREAM_WRITE(bufstream, &tmpbuf->buf);
+			VSFSTREAM_WRITE(bufstream, &tmpbuf->buf);
 		}
 	}
 }
@@ -70,7 +70,7 @@ static void vsfusbd_RNDIS_on_rx_finish(void *param)
 
 	if (rxbuf != NULL)
 	{
-		rxbuf->buf.size = STREAM_GET_DATA_SIZE(&rndis_param->rx_bufstream);
+		rxbuf->buf.size = VSFSTREAM_GET_DATA_SIZE(&rndis_param->rx_bufstream);
 		if (rxbuf->buf.size > 0)
 		{
 			struct rndis_data_packet_t *packet =
@@ -107,7 +107,7 @@ static void vsfusbd_RNDIS_on_rx_finish(void *param)
 	}
 	else
 	{
-		STREAM_READ(&rndis_param->rx_bufstream, &rndis_param->rx_buffer->buf);
+		VSFSTREAM_READ(&rndis_param->rx_bufstream, &rndis_param->rx_buffer->buf);
 	}
 }
 
@@ -231,8 +231,8 @@ static vsf_err_t vsfusbd_RNDIS_on_encapsulated_command(
 
 			// prepare vsfip buffer and connect stream
 			vsfusbd_CDCData_connect(param);
-			stream_connect_tx(param->stream_tx);
-			stream_connect_rx(param->stream_rx);
+			vsfstream_connect_tx(param->stream_tx);
+			vsfstream_connect_rx(param->stream_rx);
 		}
 		break;
 	case RNDIS_HALT_MSG:
@@ -353,8 +353,8 @@ static vsf_err_t vsfusbd_RNDIS_on_encapsulated_command(
 			rndis_param->netif_inited = false;
 
 			// free all vsfip buffer and reset stream
-			stream_disconnect_tx(param->stream_tx);
-			stream_disconnect_rx(param->stream_rx);
+			vsfstream_disconnect_tx(param->stream_tx);
+			vsfstream_disconnect_rx(param->stream_rx);
 		}
 		break;
 	case RNDIS_INDICATE_STATUS_MSG:
@@ -408,13 +408,13 @@ vsfusbd_RNDISData_class_init(uint8_t iface, struct vsfusbd_device_t *device)
 
 	// stream init
 	memset(&param->tx_bufstream, 0, sizeof(param->tx_bufstream));
-	param->tx_bufstream.stream.op = &bufstream_op;
+	param->tx_bufstream.stream.op = &vsf_bufstream_op;
 	param->tx_bufstream.stream.callback_tx.param = param;
 	param->tx_bufstream.mem.read = true;
 	param->CDCACM.CDC.stream_tx = (struct vsf_stream_t *)&param->tx_bufstream;
 	param->CDCACM.CDC.callback.on_tx_finish = vsfusbd_RNDIS_on_tx_finish;
 	memset(&param->rx_bufstream, 0, sizeof(param->rx_bufstream));
-	param->rx_bufstream.stream.op = &bufstream_op;
+	param->rx_bufstream.stream.op = &vsf_bufstream_op;
 	param->rx_bufstream.stream.callback_rx.param = param;
 	param->rx_bufstream.mem.read = false;
 	param->CDCACM.CDC.callback.on_rx_finish = vsfusbd_RNDIS_on_rx_finish;

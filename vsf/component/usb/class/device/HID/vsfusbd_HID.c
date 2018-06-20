@@ -172,7 +172,7 @@ vsfusbd_HID_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		}
 
 		param->bufstream.mem.read = true;
-		param->bufstream.stream.op = &bufstream_op;
+		param->bufstream.stream.op = &vsf_bufstream_op;
 		param->bufstream.stream.callback_tx.on_connect = NULL;
 		param->bufstream.stream.callback_tx.on_disconnect = NULL;
 		param->bufstream.stream.callback_tx.on_inout = NULL;
@@ -188,8 +188,8 @@ vsfusbd_HID_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		}
 
 		// enable timer
-		param->timer4ms.sm = sm;
-		param->timer4ms.evt = VSFUSBD_HID_EVT_TIMER4MS;
+		param->timer4ms.notifier.sm = sm;
+		param->timer4ms.notifier.evt = VSFUSBD_HID_EVT_TIMER4MS;
 		param->timer4ms.interval = 4;
 		param->timer4ms.trigger_cnt = -1;
 		vsftimer_enqueue(&param->timer4ms);
@@ -237,8 +237,8 @@ vsfusbd_HID_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 				{
 					param->cur_IN_id = report->id;
 					param->bufstream.mem.buffer = report->buffer;
-					STREAM_INIT(&param->bufstream);
-					STREAM_CONNECT_TX(&param->bufstream);
+					VSFSTREAM_INIT(&param->bufstream);
+					VSFSTREAM_CONNECT_TX(&param->bufstream);
 
 					transact->ep = param->ep_in;
 					transact->data_size = report->buffer.size;

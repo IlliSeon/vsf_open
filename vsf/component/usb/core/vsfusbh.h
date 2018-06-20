@@ -124,7 +124,7 @@ struct vsfusbh_t
 #ifndef VSFCFG_FUNC_USBH_TINY
 	uint32_t device_bitmap[4];
 	struct vsfusbh_device_t *rh_dev;
-	struct sllist drv_list;
+	struct vsflist_t drv_list;
 #else
 	const struct vsfusbh_class_drv_t *drv;
 #endif

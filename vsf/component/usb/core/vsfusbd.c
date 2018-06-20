@@ -114,7 +114,7 @@ static void vsfusbd_transact_out(struct vsfusbd_device_t *device,
 	{
 		uint16_t ep_size = drv->ep.get_OUT_epsize(ep);
 		uint16_t pkg_size = min(ep_size, transact->data_size);
-		uint32_t free_size = stream_get_free_size(transact->stream);
+		uint32_t free_size = vsfstream_get_free_size(transact->stream);
 
 		transact->idle = free_size < pkg_size;
 		if (!transact->idle)
@@ -143,7 +143,7 @@ vsf_err_t vsfusbd_ep_recv(struct vsfusbd_device_t *device,
 		stream->callback_tx.on_connect = NULL;
 		stream->callback_tx.on_disconnect = vsfusbd_stream_on_disconnect_OUT;
 		stream->callback_tx.on_inout = vsfusbd_stream_on_out;
-		stream_connect_tx(stream);
+		vsfstream_connect_tx(stream);
 		vsfusbd_transact_out(device, transact);
 	}
 	else
@@ -210,7 +210,7 @@ vsf_err_t vsfusbd_ep_send(struct vsfusbd_device_t *device,
 		stream->callback_rx.on_connect = NULL;
 		stream->callback_rx.on_disconnect = vsfusbd_stream_on_disconnect_IN;
 		stream->callback_rx.on_inout = vsfusbd_stream_on_in;
-		stream_connect_rx(stream);
+		vsfstream_connect_rx(stream);
 
 		vsfusbd_on_IN_do(device, ep);
 #if VSFUSBD_CFG_DBUFFER_EN
@@ -687,7 +687,7 @@ static vsf_err_t vsfusbd_ctrl_prepare(struct vsfusbd_device_t *device)
 
 	// set default stream
 	ctrl_handler->stream = (struct vsf_stream_t *)&ctrl_handler->bufstream;
-	ctrl_handler->bufstream.stream.op = &bufstream_op;
+	ctrl_handler->bufstream.stream.op = &vsf_bufstream_op;
 	ctrl_handler->bufstream.mem.buffer.buffer = ctrl_handler->reply_buffer;
 	ctrl_handler->bufstream.mem.buffer.size = 0;
 	ctrl_handler->bufstream.mem.read =
@@ -717,7 +717,7 @@ static vsf_err_t vsfusbd_ctrl_prepare(struct vsfusbd_device_t *device)
 		}
 	}
 	return err ? err : !ctrl_handler->data_size ? VSFERR_NONE :
-										stream_init(ctrl_handler->stream);
+										vsfstream_init(ctrl_handler->stream);
 }
 
 static void vsfusbd_ctrl_process(struct vsfusbd_device_t *device)
@@ -759,7 +759,7 @@ static vsf_err_t vsfusbd_on_IN_do(struct vsfusbd_device_t *device, uint8_t ep)
 
 	if (transact->data_size)
 	{
-		uint32_t data_size = stream_get_data_size(transact->stream);
+		uint32_t data_size = vsfstream_get_data_size(transact->stream);
 		uint16_t ep_size = device->drv->ep.get_IN_epsize(ep);
 		uint16_t cur_size = min(transact->data_size, ep_size);
 
@@ -788,7 +788,7 @@ static vsf_err_t vsfusbd_on_IN_do(struct vsfusbd_device_t *device, uint8_t ep)
 
 		{
 			struct vsf_buffer_t buffer = {.buffer = device->tmpbuf, .size = cur_size,};
-			stream_read(transact->stream, &buffer);
+			vsfstream_read(transact->stream, &buffer);
 		}
 
 		device->drv->ep.write_IN_buffer(ep, device->tmpbuf, cur_size);
@@ -840,7 +840,7 @@ static vsf_err_t vsfusbd_on_OUT_do(struct vsfusbd_device_t *device, uint8_t ep)
 	// If not enough data in buffer, and stream_rx is disconnected, set last
 	if (transact->data_size)
 	{
-		free_size = stream_get_free_size(transact->stream) - pkg_size;
+		free_size = vsfstream_get_free_size(transact->stream) - pkg_size;
 		transact->idle = last = (pkg_size < ep_size) || !transact->data_size ||
 			(!transact->stream->rx_ready && (free_size < transact->data_size));
 	}
@@ -857,7 +857,7 @@ static vsf_err_t vsfusbd_on_OUT_do(struct vsfusbd_device_t *device, uint8_t ep)
 	if (pkg_size > 0)
 	{
 		struct vsf_buffer_t buffer = {.buffer = device->tmpbuf, .size = pkg_size,};
-		stream_write(transact->stream, &buffer);
+		vsfstream_write(transact->stream, &buffer);
 	}
 
 	if (last)

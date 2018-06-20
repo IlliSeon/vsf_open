@@ -9,7 +9,7 @@ struct vsf_dynpool_list_t
 #ifdef DYNPOOL_CFG_GC_EN
 	uint32_t gc_tick;
 #endif
-	struct sllist list;
+	struct vsflist_t list;
 };
 
 #ifdef DYNPOOL_CFG_GC_EN
@@ -36,7 +36,7 @@ struct vsf_dynpool_t
 #endif
 
 	// private
-	struct sllist head;
+	struct vsflist_t head;
 	uint16_t cur_pool_num;
 };
 

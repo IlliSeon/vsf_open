@@ -91,12 +91,12 @@ static uint8_t* vsf_mal2scsi_prepare_transact(struct vsfscsi_lun_t *lun,
 		bufstream->mem.buffer.buffer = buffer;
 		bufstream->mem.buffer.size = size;
 		bufstream->mem.read = true;
-		stream->stream.op = &bufstream_op;
+		stream->stream.op = &vsf_bufstream_op;
 		stream->stream.callback_tx.param = transact;
 		stream->stream.callback_tx.on_inout = NULL;
 		stream->stream.callback_tx.on_connect = NULL;
 		stream->stream.callback_tx.on_disconnect = NULL;
-		STREAM_INIT(stream);
+		VSFSTREAM_INIT(stream);
 	}
 	else
 	{
@@ -104,8 +104,8 @@ static uint8_t* vsf_mal2scsi_prepare_transact(struct vsfscsi_lun_t *lun,
 
 		// setup malstream
 		mbufstream->mem.multibuf = stream->mbuf;
-		stream->stream.op = &mbufstream_op;
-		STREAM_INIT(stream);
+		stream->stream.op = &vsf_mbufstream_op;
+		VSFSTREAM_INIT(stream);
 	}
 	transact->data_size = size;
 	transact->err = VSFERR_NONE;
@@ -375,9 +375,9 @@ static vsf_err_t vsf_mal2scsi_execute(struct vsfscsi_lun_t *lun, uint8_t *CDB,
 	lun->sensekey = SCSI_SENSEKEY_NO_SENSE;
 	lun->asc = SCSI_ASC_NONE;
 	if ((transact->lun != NULL) && (transact->lun->stream != NULL) &&
-		(transact->lun->stream->op == &bufstream_op))
+		(transact->lun->stream->op == &vsf_bufstream_op))
 	{
-		stream_connect_tx(transact->lun->stream);
+		vsfstream_connect_tx(transact->lun->stream);
 	}
 	return VSFERR_NONE;
 exit_invalid_command:

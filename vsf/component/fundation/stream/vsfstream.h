@@ -17,10 +17,10 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef __STREAM_H_INCLUDED__
-#define __STREAM_H_INCLUDED__
+#ifndef __VSFSTREAM_H_INCLUDED__
+#define __VSFSTREAM_H_INCLUDED__
 
-#include "component/fundation/buffer/buffer.h"
+#include "component/fundation/buffer/vsfbuffer.h"
 
 struct vsf_stream_t;
 struct vsf_stream_op_t
@@ -62,18 +62,18 @@ struct vsf_stream_t
 	bool overflow;
 };
 
-#define STREAM_INIT(s)			stream_init((struct vsf_stream_t *)(s))
-#define STREAM_FINI(s)			stream_fini((struct vsf_stream_t *)(s))
-#define STREAM_WRITE(s, b)		stream_write((struct vsf_stream_t *)(s), (b))
-#define STREAM_READ(s, b)		stream_read((struct vsf_stream_t *)(s), (b))
-#define STREAM_GET_DATA_SIZE(s)	stream_get_data_size((struct vsf_stream_t *)(s))
-#define STREAM_GET_FREE_SIZE(s)	stream_get_free_size((struct vsf_stream_t *)(s))
-#define STREAM_GET_WBUF(s, p)	stream_get_wbuf((struct vsf_stream_t *)(s), (p))
-#define STREAM_GET_RBUF(s, p)	stream_get_rbuf((struct vsf_stream_t *)(s), (p))
-#define STREAM_CONNECT_RX(s)	stream_connect_rx((struct vsf_stream_t *)(s))
-#define STREAM_CONNECT_TX(s)	stream_connect_tx((struct vsf_stream_t *)(s))
-#define STREAM_DISCONNECT_RX(s)	stream_disconnect_rx((struct vsf_stream_t *)(s))
-#define STREAM_DISCONNECT_TX(s)	stream_disconnect_tx((struct vsf_stream_t *)(s))
+#define VSFSTREAM_INIT(s)			vsfstream_init((struct vsf_stream_t *)(s))
+#define VSFSTREAM_FINI(s)			vsfstream_fini((struct vsf_stream_t *)(s))
+#define VSFSTREAM_WRITE(s, b)		vsfstream_write((struct vsf_stream_t *)(s), (b))
+#define VSFSTREAM_READ(s, b)		vsfstream_read((struct vsf_stream_t *)(s), (b))
+#define VSFSTREAM_GET_DATA_SIZE(s)	vsfstream_get_data_size((struct vsf_stream_t *)(s))
+#define VSFSTREAM_GET_FREE_SIZE(s)	vsfstream_get_free_size((struct vsf_stream_t *)(s))
+#define VSFSTREAM_GET_WBUF(s, p)	vsfstream_get_wbuf((struct vsf_stream_t *)(s), (p))
+#define VSFSTREAM_GET_RBUF(s, p)	vsfstream_get_rbuf((struct vsf_stream_t *)(s), (p))
+#define VSFSTREAM_CONNECT_RX(s)		vsfstream_connect_rx((struct vsf_stream_t *)(s))
+#define VSFSTREAM_CONNECT_TX(s)		vsfstream_connect_tx((struct vsf_stream_t *)(s))
+#define VSFSTREAM_DISCONNECT_RX(s)	vsfstream_disconnect_rx((struct vsf_stream_t *)(s))
+#define VSFSTREAM_DISCONNECT_TX(s)	vsfstream_disconnect_tx((struct vsf_stream_t *)(s))
 
 // fifo stream, user_mem is vsf_fifo_t: available in interrupt
 struct vsf_fifostream_t
@@ -108,22 +108,22 @@ struct vsf_bufstream_t
 };
 
 #ifndef VSFCFG_EXCLUDE_STREAM
-vsf_err_t stream_init(struct vsf_stream_t *stream);
-vsf_err_t stream_fini(struct vsf_stream_t *stream);
-uint32_t stream_write(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer);
-uint32_t stream_read(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer);
-uint32_t stream_get_data_size(struct vsf_stream_t *stream);
-uint32_t stream_get_free_size(struct vsf_stream_t *stream);
-uint32_t stream_get_wbuf(struct vsf_stream_t *stream, uint8_t **ptr);
-uint32_t stream_get_rbuf(struct vsf_stream_t *stream, uint8_t **ptr);
-void stream_connect_rx(struct vsf_stream_t *stream);
-void stream_connect_tx(struct vsf_stream_t *stream);
-void stream_disconnect_rx(struct vsf_stream_t *stream);
-void stream_disconnect_tx(struct vsf_stream_t *stream);
+vsf_err_t vsfstream_init(struct vsf_stream_t *stream);
+vsf_err_t vsfstream_fini(struct vsf_stream_t *stream);
+uint32_t vsfstream_write(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer);
+uint32_t vsfstream_read(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer);
+uint32_t vsfstream_get_data_size(struct vsf_stream_t *stream);
+uint32_t vsfstream_get_free_size(struct vsf_stream_t *stream);
+uint32_t vsfstream_get_wbuf(struct vsf_stream_t *stream, uint8_t **ptr);
+uint32_t vsfstream_get_rbuf(struct vsf_stream_t *stream, uint8_t **ptr);
+void vsfstream_connect_rx(struct vsf_stream_t *stream);
+void vsfstream_connect_tx(struct vsf_stream_t *stream);
+void vsfstream_disconnect_rx(struct vsf_stream_t *stream);
+void vsfstream_disconnect_tx(struct vsf_stream_t *stream);
 
-extern const struct vsf_stream_op_t fifostream_op;
-extern const struct vsf_stream_op_t mbufstream_op;
-extern const struct vsf_stream_op_t bufstream_op;
+extern const struct vsf_stream_op_t vsf_fifostream_op;
+extern const struct vsf_stream_op_t vsf_mbufstream_op;
+extern const struct vsf_stream_op_t vsf_bufstream_op;
 #endif
 
-#endif	// __STREAM_H_INCLUDED__
+#endif	// __VSFSTREAM_H_INCLUDED__

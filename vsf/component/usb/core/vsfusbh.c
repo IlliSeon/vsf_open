@@ -23,7 +23,7 @@
 struct vsfusbh_class_drv_list
 {
 	const struct vsfusbh_class_drv_t *drv;
-	struct sllist list;
+	struct vsflist_t list;
 };
 
 struct vsfusbh_device_t *vsfusbh_alloc_device(struct vsfusbh_t *usbh)
@@ -164,14 +164,14 @@ static const struct vsfusbh_class_drv_t *vsfusbh_match_intrface_driver(
 		struct vsfusbh_t *usbh, struct vsfusbh_device_t *dev,
 		struct vsfusbh_ifs_t *ifs, const struct vsfusbh_device_id_t **id)
 {
-	struct sllist *list = &usbh->drv_list;
+	struct vsflist_t *list = &usbh->drv_list;
 	struct vsfusbh_class_drv_list *drv_list;
 	const struct vsfusbh_class_drv_t *drv;
 
 	while (list->next)
 	{
 		list = list->next;
-		drv_list = sllist_get_container(list, struct vsfusbh_class_drv_list, list);
+		drv_list = vsflist_get_container(list, struct vsfusbh_class_drv_list, list);
 		drv = drv_list->drv;
 
 		*id = drv->id_table;
@@ -812,7 +812,7 @@ static struct vsfsm_state_t *vsfusbh_init_evt_handler(struct vsfsm_t *sm,
 	case VSFSM_EVT_EXIT:
 		break;
 	case VSFSM_EVT_INIT:
-		sllist_init_node(usbh->drv_list);
+		vsflist_init_node(usbh->drv_list);
 		usbh->pt.thread = usbh->hcd.drv->init_thread;
 		usbh->pt.user_data = usbh;
 		usbh->pt.state = 0;
@@ -884,7 +884,7 @@ vsf_err_t vsfusbh_register_driver(struct vsfusbh_t *usbh,
 	}
 	memset(drv_list, 0, sizeof(struct vsfusbh_class_drv_list));
 	drv_list->drv = drv;
-	sllist_append(&usbh->drv_list, &drv_list->list);
+	vsflist_append(&usbh->drv_list, &drv_list->list);
 #else
 	usbh->drv = drv;
 #endif

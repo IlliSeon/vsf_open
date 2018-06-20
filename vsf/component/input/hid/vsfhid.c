@@ -53,16 +53,15 @@ struct vsfhid_global_t vsfhid;
 static struct vsfhid_report_t *vsfhid_get_report(struct vsfhid_dev_t *dev,
 		struct hid_desc_t *desc, uint8_t type)
 {
-	struct vsfhid_report_t *report;
+	struct vsfhid_report_t *report = NULL;
 
-	report = sllist_get_container(dev->report_list.next, struct vsfhid_report_t,
-				report_list);
-	while (report)
+	vsflist_foreach(__report, dev->report_list.next, struct vsfhid_report_t, report_list)
 	{
-		if ((report->type == type) && (report->id == desc->report_id))
+		if ((__report->type == type) && (__report->id == desc->report_id))
+		{
+			report = __report;
 			break;
-		report = sllist_get_container(report->report_list.next,
-				struct vsfhid_report_t, report_list);
+		}
 	}
 
 	if (!report)
@@ -118,7 +117,7 @@ static vsf_err_t vsfhid_parse_item(struct vsfhid_dev_t *dev,
 				usage->logical_min = desc->logical_min;
 				usage->logical_max = desc->logical_max;
 
-				sllist_append(&report->usage_list, &usage->list);
+				vsflist_append(&report->usage_list, &usage->list);
 
 				desc->usage_min = -1;
 				desc->usage_max = -1;
@@ -143,7 +142,7 @@ static vsf_err_t vsfhid_parse_item(struct vsfhid_dev_t *dev,
 					usage->logical_min = desc->logical_min;
 					usage->logical_max = desc->logical_max;
 
-					sllist_append(&report->usage_list, &usage->list);
+					vsflist_append(&report->usage_list, &usage->list);
 				}
 			}
 
@@ -174,7 +173,7 @@ static vsf_err_t vsfhid_parse_item(struct vsfhid_dev_t *dev,
 				usage->logical_min = desc->logical_min;
 				usage->logical_max = desc->logical_max;
 
-				sllist_append(&report->usage_list, &usage->list);
+				vsflist_append(&report->usage_list, &usage->list);
 
 				desc->usage_min = -1;
 				desc->usage_max = -1;
@@ -200,7 +199,7 @@ static vsf_err_t vsfhid_parse_item(struct vsfhid_dev_t *dev,
 					usage->logical_min = desc->logical_min;
 					usage->logical_max = desc->logical_max;
 
-					sllist_append(&report->usage_list, &usage->list);
+					vsflist_append(&report->usage_list, &usage->list);
 				}
 			}
 
@@ -291,28 +290,18 @@ static vsf_err_t vsfhid_parse_item(struct vsfhid_dev_t *dev,
 
 void vsfhid_free_dev(struct vsfhid_dev_t *dev)
 {
-	struct vsfhid_report_t *report, *report_next;
-	struct sllist *usage_list, *usage_next;
-
-	report = sllist_get_container(dev->report_list.next,
-				struct vsfhid_report_t, report_list);
-	while (report)
+	vsflist_foreach_next(report, report_next, dev->report_list.next,
+				struct vsfhid_report_t, report_list)
 	{
-		report_next = sllist_get_container(report->report_list.next,
-				struct vsfhid_report_t, report_list);
-
-		usage_list = report->usage_list.next;
-		while (usage_list)
+		vsflist_foreach_next(usage, usage_next, report->usage_list.next,
+				struct vsfhid_usage_t, list)
 		{
-			usage_next = usage_list->next;
-			vsf_bufmgr_free(usage_list);
-			usage_list = usage_next;
+			vsf_bufmgr_free(usage);
 		}
 
 		if (report->value)
 			vsf_bufmgr_free(report->value);
 		vsf_bufmgr_free(report);
-		report = report_next;
 	}
 }
 
@@ -356,36 +345,32 @@ free_hid_report:
 
 uint16_t vsfhid_get_max_input_size(struct vsfhid_dev_t *dev)
 {
-	struct vsfhid_report_t *report = sllist_get_container(dev->report_list.next,
-				struct vsfhid_report_t, report_list);
 	uint16_t maxsize = 0;
 
-	while (report != NULL)
+	vsflist_foreach(report, dev->report_list.next, struct vsfhid_report_t, report_list)
 	{
 		if (report->bitlen > maxsize)
 			maxsize = report->bitlen;
-		report = sllist_get_container(report->report_list.next,
-				struct vsfhid_report_t, report_list);
 	}
 	return (maxsize + 7) >> 3;
 }
 
 void vsfhid_process_input(struct vsfhid_dev_t *dev, uint8_t *buf, uint32_t len)
 {
-	struct vsfhid_report_t *report = sllist_get_container(dev->report_list.next,
-				struct vsfhid_report_t, report_list);
+	struct vsfhid_report_t *report = NULL;
 	struct vsfhid_event_t event;
-	struct vsfhid_usage_t *usage;
 	uint32_t cur_value, pre_value;
 	bool reported = false;
 	int16_t id = dev->report_has_id ? *buf++ : -1;
 	int32_t i;
 
-	while (report != NULL)
+	vsflist_foreach(__report, dev->report_list.next, struct vsfhid_report_t, report_list)
 	{
-		if ((report->type == HID_ITEM_INPUT) && (report->id == id)) break;
-		report = sllist_get_container(report->report_list.next,
-				struct vsfhid_report_t, report_list);
+		if ((__report->type == HID_ITEM_INPUT) && (__report->id == id))
+		{
+			report = __report;
+			break;
+		}
 	}
 	if (!report)
 		return;
@@ -397,8 +382,7 @@ void vsfhid_process_input(struct vsfhid_dev_t *dev, uint8_t *buf, uint32_t len)
 		memset(report->value, 0, len);
 	}
 
-	usage = sllist_get_container(report->usage_list.next, struct vsfhid_usage_t, list);
-	while (usage != NULL)
+	vsflist_foreach(usage, report->usage_list.next, struct vsfhid_usage_t, list)
 	{
 		for (i = 0; i < usage->report_count; ++i)
 		{
@@ -421,7 +405,6 @@ void vsfhid_process_input(struct vsfhid_dev_t *dev, uint8_t *buf, uint32_t len)
 					vsfhid.report(report->generic_usage, &event);
 			}
 		}
-		usage = sllist_get_container(usage->list.next, struct vsfhid_usage_t, list);
 	}
 
 	// just report input process end if changed reportted

@@ -41,8 +41,8 @@ static vsf_err_t vsfusbd_MSCBOT_SendCSW(struct vsfusbd_device_t *device,
 	param->bufstream.mem.buffer.buffer = (uint8_t *)&param->CSW;
 	param->bufstream.mem.buffer.size = sizeof(param->CSW);
 	param->bufstream.mem.read = true;
-	param->bufstream.stream.op = &bufstream_op;
-	STREAM_INIT(&param->bufstream);
+	param->bufstream.stream.op = &vsf_bufstream_op;
+	VSFSTREAM_INIT(&param->bufstream);
 
 	param->transact.ep = param->ep_in;
 	param->transact.data_size = sizeof(param->CSW);
@@ -99,10 +99,10 @@ static void vsfusbd_MSCBOT_dummy_inout(void *p)
 	struct vsf_buffer_t buffer =
 	{
 		.buffer = NULL,
-		.size = stream_get_data_size(transact->stream),
+		.size = vsfstream_get_data_size(transact->stream),
 	};
 
-	stream_read(transact->stream, &buffer);
+	vsfstream_read(transact->stream, &buffer);
 }
 
 static void vsfusbd_MSCBOT_on_data_finish(void *p)
@@ -118,7 +118,7 @@ static void vsfusbd_MSCBOT_on_data_finish(void *p)
 	}
 	if ((CBW->bmCBWFlags & USBMSC_CBWFLAGS_DIR_MASK) == USBMSC_CBWFLAGS_DIR_IN)
 	{
-		uint32_t remain = stream_get_data_size(transact->stream);
+		uint32_t remain = vsfstream_get_data_size(transact->stream);
 		if (remain)
 		{
 			transact->data_size = remain;
@@ -233,8 +233,8 @@ static void vsfusbd_MSCBOT_on_idle(void *p)
 	param->bufstream.mem.buffer.buffer = (uint8_t *)&param->CBW;
 	param->bufstream.mem.buffer.size = sizeof(param->CBW);
 	param->bufstream.mem.read = false;
-	param->bufstream.stream.op = &bufstream_op;
-	STREAM_INIT(&param->bufstream);
+	param->bufstream.stream.op = &vsf_bufstream_op;
+	VSFSTREAM_INIT(&param->bufstream);
 
 	param->transact.ep = param->ep_out;
 	param->transact.data_size = sizeof(param->CBW);

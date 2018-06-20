@@ -343,10 +343,10 @@ vsf_err_t vsfhal_sdio_config_d1int(vsfhal_sdio_t index,
 	}
 	else
 	{
-//		const struct M480_sdio_t *sdio = &M480_sdio[sdio_index];
-//		SDH_T *sdreg = sdio->sdreg;
-//		sdreg->INTEN &= ~SDH_INTEN_SDHIEN0_Msk;
-//		sdreg->INTSTS = SDH_INTSTS_SDHIF0_Msk;
+		const struct M480_sdio_t *sdio = &M480_sdio[sdio_index];
+		SDH_T *sdreg = sdio->sdreg;
+		sdreg->INTEN &= ~SDH_INTEN_SDHIEN0_Msk;
+		sdreg->INTSTS = SDH_INTSTS_SDHIF0_Msk;
 	}
 	
 	return VSFERR_NONE;
@@ -365,10 +365,10 @@ vsf_err_t vsfhal_sdio_enable_d1int(vsfhal_sdio_t index)
 
 	if (sdio_param->d1_callback != NULL)
 	{
-//		const struct M480_sdio_t *sdio = &M480_sdio[sdio_index];
-//		SDH_T *sdreg = sdio->sdreg;
-//		sdreg->INTSTS = SDH_INTSTS_SDHIF0_Msk;
-//		sdreg->INTEN |= SDH_INTEN_SDHIEN0_Msk;
+		const struct M480_sdio_t *sdio = &M480_sdio[sdio_index];
+		SDH_T *sdreg = sdio->sdreg;
+		sdreg->INTSTS = SDH_INTSTS_SDHIF0_Msk;
+		sdreg->INTEN |= SDH_INTEN_SDHIEN0_Msk;
 		return VSFERR_NONE;
 	}
 	
@@ -384,16 +384,16 @@ static void sdio_handler(uint8_t sdio_index)
 
 	uint32_t intsts = sdreg->INTSTS;
 
-/*	if (intsts & SDH_INTSTS_SDHIF0_Msk)
+	if (intsts & SDH_INTSTS_SDHIF0_Msk)
 	{
 		if (sdio_param->d1_callback != NULL)
 		{
 			sdio_param->d1_callback(sdio_param->d1_param);
 		}
-		*sdreg->INTEN &= ~SDH_INTEN_SDHIEN0_Msk;
-		*sdreg->INTSTS = SDH_INTSTS_SDHIF0_Msk;
+		sdreg->INTEN &= ~SDH_INTEN_SDHIEN0_Msk;
+		sdreg->INTSTS = SDH_INTSTS_SDHIF0_Msk;
 	}
-*/
+
 	if (intsts & (SDH_INTSTS_DITOIF_Msk | SDH_INTSTS_RTOIF_Msk))
 	{
 		sdreg->CTL |= SDH_CTL_CTLRST_Msk;

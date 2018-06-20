@@ -1,0 +1,194 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="..\..\component\file\vsfile.c">
+      <Filter>vsf\component\file</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\component\vm\core\vsfvm.c">
+      <Filter>vsf\component\vm\core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\component\vm\core\vsfvm_compiler.c">
+      <Filter>vsf\component\vm\core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\component\vm\core\lexer\vsfvm_lexer.c">
+      <Filter>vsf\component\vm\core\lexer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\component\vm\core\lexer\dart\vsfvm_lexer_dart.c">
+      <Filter>vsf\component\vm\core\lexer\dart</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\component\vm\core\lexer\python\vsfvm_lexer_python.c">
+      <Filter>vsf\component\vm\core\lexer\python</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\component\vm\core\vsfvm_objdump.c">
+      <Filter>vsf\component\vm\core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\vsf\hal\cpu\pc\core.c">
+      <Filter>vsf\hal\cpu\pc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\vsf\framework\vsftimer\vsftimer.c">
+      <Filter>vsf\framework\vsftimer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\vsf\framework\vsfsm\vsfsm.c">
+      <Filter>vsf\framework\vsfsm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\vsf\component\tool\dynarr\vsf_dynarr.c">
+      <Filter>vsf\component\tool\dynarr</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\vsf\component\tool\dynpool\vsf_dynpool.c">
+      <Filter>vsf\component\tool\dynpool</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\component\tool\dynstack\vsf_dynstack.c">
+      <Filter>vsf\component\tool\dynstack</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\component\vm\ext\vsf\vsfvm_ext_vsf.c">
+      <Filter>vsf\component\vm\ext\vsf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\hal\cpu\pc\gpio\GPIO.c">
+      <Filter>vsf\hal\cpu\pc\gpio</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\component\debug\vsfdbg.c">
+      <Filter>vsf\component\debug</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\component\vm\ext\std\vsfvm_ext_std.c">
+      <Filter>vsf\component\vm\ext\std</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\component\vm\core\vsfvm_common.c">
+      <Filter>vsf\component\vm\core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\component\vm\core\vsfvm_snapshot.c">
+      <Filter>vsf\component\vm\core</Filter>
+    </ClCompile>
+    <ClCompile Include="app\vsfvm\usrapp.c">
+      <Filter>app\vsfvm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\compiler\VC\compiler.c">
+      <Filter>vsf\compiler\VC</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\hal\arch\pc\vsfmain.c">
+      <Filter>vsf\hal\arch\pc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\component\fundation\bittool\vsfbittool.c">
+      <Filter>vsf\component\fundation\bittool</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\component\fundation\buffer\vsfbuffer.c">
+      <Filter>vsf\component\fundation\buffer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\component\fundation\list\vsflist.c">
+      <Filter>vsf\component\fundation\list</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\component\fundation\stream\vsfstream.c">
+      <Filter>vsf\component\fundation\stream</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="vsfhal_cfg.h" />
+    <ClInclude Include="vsf_cfg.h" />
+    <ClInclude Include="app\vsfvm\app_cfg.h">
+      <Filter>app\vsfvm</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="vsf">
+      <UniqueIdentifier>{578e1d74-efc0-4b77-8075-b4f52f0c0523}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vsf\component">
+      <UniqueIdentifier>{507558ae-2ff6-41ce-b5b0-4f20d2a86a11}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vsf\component\fundation">
+      <UniqueIdentifier>{9fcc17fe-4f79-40e1-8c78-fe8534343460}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vsf\component\fundation\bittool">
+      <UniqueIdentifier>{a5d32c7a-5b26-475e-bb10-9396215eeb3f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vsf\component\fundation\buffer">
+      <UniqueIdentifier>{2b50c774-8cd5-4575-82d6-8192f92ea51b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vsf\component\fundation\list">
+      <UniqueIdentifier>{5643c808-6c42-4708-b51d-2b51d5d462d5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vsf\component\vm">
+      <UniqueIdentifier>{ce6e679b-c5fd-41cf-96c1-7d5c802c7fe9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vsf\component\vm\core">
+      <UniqueIdentifier>{7cb8f4a9-51ca-4a72-844c-552979b308ac}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vsf\component\vm\core\lexer">
+      <UniqueIdentifier>{e0c08e4f-3e2f-4629-a156-061285bf4a5f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vsf\component\vm\core\lexer\dart">
+      <UniqueIdentifier>{04929399-977a-4abb-8475-958066f22276}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vsf\component\file">
+      <UniqueIdentifier>{0a969a01-b2a3-48c8-b5e7-e1abfc29debc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vsf\component\vm\core\lexer\python">
+      <UniqueIdentifier>{dd93aef1-79c9-4431-bbd8-ed4173cc7b52}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vsf\hal">
+      <UniqueIdentifier>{eba72b12-ef76-4468-826c-8f6aff822133}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vsf\hal\cpu">
+      <UniqueIdentifier>{342aa6ce-7a11-4eb7-8d51-6083f4f3967f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vsf\hal\cpu\pc">
+      <UniqueIdentifier>{126d92a2-7a16-4574-a766-b8ef7d55bbaf}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vsf\framework">
+      <UniqueIdentifier>{ccdb1481-6e63-4d92-a1d1-20c386058b17}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vsf\framework\vsftimer">
+      <UniqueIdentifier>{041ea4b5-07f4-4ac0-b2bb-5fe1504de39b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vsf\framework\vsfsm">
+      <UniqueIdentifier>{20194485-747d-4c94-82de-f00a3d828990}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vsf\component\tool">
+      <UniqueIdentifier>{d6102461-48bb-4575-956f-e273991fb162}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vsf\component\tool\dynarr">
+      <UniqueIdentifier>{4b5158bc-02ff-4d32-a743-92bf6e368aa5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vsf\component\tool\dynpool">
+      <UniqueIdentifier>{f4e50697-ac4b-44e9-8942-642d60cc9b7e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vsf\component\tool\dynstack">
+      <UniqueIdentifier>{b3c133ee-b7f7-4dc6-b6a2-da995d9d0cbe}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vsf\component\vm\ext">
+      <UniqueIdentifier>{fcb504fd-0b16-4fcd-8604-7f36eb107a88}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vsf\component\vm\ext\vsf">
+      <UniqueIdentifier>{dd688adb-9d51-4c8e-9a32-b3960eeda290}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vsf\hal\cpu\pc\gpio">
+      <UniqueIdentifier>{3825c69b-4335-4d01-9f50-723c10331881}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vsf\component\debug">
+      <UniqueIdentifier>{a6251dda-cce1-43ce-9cab-1f091debd79b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vsf\component\fundation\stream">
+      <UniqueIdentifier>{c1330fe2-48d5-4ca9-825f-72276f7202e7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vsf\component\vm\ext\std">
+      <UniqueIdentifier>{dfa47738-2b23-45b7-aa91-04fe0fb67617}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="app">
+      <UniqueIdentifier>{3dbd004f-0b1c-4850-8bad-4e35c886560e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="app\vsfvm">
+      <UniqueIdentifier>{92e467d0-6831-4552-85c0-0bf23be445f1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vsf\compiler">
+      <UniqueIdentifier>{57f59887-29b3-4f9d-a994-104fb641172a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vsf\compiler\VC">
+      <UniqueIdentifier>{df79b260-88df-40b6-a7e7-90355cf9e0e5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vsf\hal\arch">
+      <UniqueIdentifier>{412dd6dc-9b1e-4324-81c3-47d9413c8ae6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vsf\hal\arch\pc">
+      <UniqueIdentifier>{0a84a9f4-ad63-4f84-8980-0e4ef3f22944}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

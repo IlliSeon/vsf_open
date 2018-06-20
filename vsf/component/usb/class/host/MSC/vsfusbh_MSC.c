@@ -152,9 +152,9 @@ static void vsfusbh_msc_disconnect(struct vsfusbh_t *usbh,
 				(lun[i].stream->callback_rx.on_inout == vsfusbh_msc_on_inout))
 			{
 				if (lun[i].stream->rx_ready)
-					STREAM_DISCONNECT_RX(lun->stream);
+					VSFSTREAM_DISCONNECT_RX(lun->stream);
 				else if (lun[i].stream->tx_ready)
-					STREAM_DISCONNECT_TX(lun->stream);
+					VSFSTREAM_DISCONNECT_TX(lun->stream);
 			}
 			lun[i].param = NULL;
 		}
@@ -206,13 +206,13 @@ again:
 	{
 		lun->stream->callback_rx.param = msc;
 		lun->stream->callback_rx.on_inout = vsfusbh_msc_on_inout;
-		STREAM_CONNECT_RX(lun->stream);
+		VSFSTREAM_CONNECT_RX(lun->stream);
 	}
 	else
 	{
 		lun->stream->callback_rx.param = msc;
 		lun->stream->callback_rx.on_inout = vsfusbh_msc_on_inout;
-		STREAM_CONNECT_TX(lun->stream);
+		VSFSTREAM_CONNECT_TX(lun->stream);
 	}
 
 	urb->pipe = usb_sndbulkpipe(urb->hcddev, msc->ep_in);
@@ -233,7 +233,7 @@ again:
 		{
 			while (1)
 			{
-				msc->cur_size = STREAM_GET_RBUF(lun->stream, &msc->cur_ptr);
+				msc->cur_size = VSFSTREAM_GET_RBUF(lun->stream, &msc->cur_ptr);
 				remain = msc->CBW.dCBWDataTransferLength -
 								lun->dev->transact.data_size;
 				tmp32 = min(epsize, remain);
@@ -260,14 +260,14 @@ again:
 					.buffer = NULL,
 					.size = msc->cur_size,
 				};
-				STREAM_READ(lun->stream, &buffer);
+				VSFSTREAM_READ(lun->stream, &buffer);
 			}
 		}
 		else
 		{
 			while (1)
 			{
-				msc->cur_size = STREAM_GET_WBUF(lun->stream, &msc->cur_ptr);
+				msc->cur_size = VSFSTREAM_GET_WBUF(lun->stream, &msc->cur_ptr);
 				remain = msc->CBW.dCBWDataTransferLength -
 								lun->dev->transact.data_size;
 				tmp32 = min(epsize, remain);
@@ -294,7 +294,7 @@ again:
 					.buffer = NULL,
 					.size = msc->cur_size,
 				};
-				STREAM_WRITE(lun->stream, &buffer);
+				VSFSTREAM_WRITE(lun->stream, &buffer);
 			}
 		}
 		lun->dev->transact.data_size += msc->cur_size;
@@ -302,9 +302,9 @@ again:
 			break;
 	}
 	if (send)
-		STREAM_DISCONNECT_RX(lun->stream);
+		VSFSTREAM_DISCONNECT_RX(lun->stream);
 	else
-		STREAM_DISCONNECT_TX(lun->stream);
+		VSFSTREAM_DISCONNECT_TX(lun->stream);
 
 	urb->pipe = usb_rcvbulkpipe(urb->hcddev, msc->ep_out);
 	urb->transfer_buffer = &msc->CSW;
@@ -330,9 +330,9 @@ again:
 fail_disconnect:
 	lun->dev->transact.err = VSFERR_FAIL;
 	if (send)
-		STREAM_DISCONNECT_RX(lun->stream);
+		VSFSTREAM_DISCONNECT_RX(lun->stream);
 	else
-		STREAM_DISCONNECT_TX(lun->stream);
+		VSFSTREAM_DISCONNECT_TX(lun->stream);
 	return VSFERR_FAIL;
 fail:
 	lun->dev->transact.err = VSFERR_FAIL;

@@ -76,15 +76,15 @@ vsf_err_t vsfshell_output_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 		// then output the VSFSHELL_PROMPT and the original commandline
 		shell->output_interrupted = false;
 
-		size_avail = stream_get_free_size(shell->stream_tx);
+		size_avail = vsfstream_get_free_size(shell->stream_tx);
 		while (size_avail < strlen(VSFSHELL_PROMPT))
 		{
 			vsfsm_pt_wfe(pt, VSFSHELL_EVT_STREAMTX_ONOUT);
-			size_avail = stream_get_free_size(shell->stream_tx);
+			size_avail = vsfstream_get_free_size(shell->stream_tx);
 		}
 		buffer.buffer = (uint8_t *)VSFSHELL_PROMPT;
 		buffer.size = strlen(VSFSHELL_PROMPT);
-		stream_write(shell->stream_tx, &buffer);
+		vsfstream_write(shell->stream_tx, &buffer);
 		shell->prompted = true;
 
 		shell->tbuffer.buffer.buffer[shell->tbuffer.position] = '\0';
@@ -92,11 +92,11 @@ vsf_err_t vsfshell_output_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 		str_len = strlen(shell->printf_pos);
 		while (str_len > 0)
 		{
-			size_avail = stream_get_free_size(shell->stream_tx);
+			size_avail = vsfstream_get_free_size(shell->stream_tx);
 			if (!size_avail)
 			{
 				vsfsm_pt_wfe(pt, VSFSHELL_EVT_STREAMTX_ONOUT);
-				size_avail = stream_get_free_size(shell->stream_tx);
+				size_avail = vsfstream_get_free_size(shell->stream_tx);
 				str_len = strlen(shell->printf_pos);
 			}
 
@@ -104,7 +104,7 @@ vsf_err_t vsfshell_output_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 			{
 				buffer.buffer = (uint8_t *)shell->printf_pos;
 				buffer.size = min(str_len, size_avail);
-				buffer.size = stream_write(shell->stream_tx, &buffer);
+				buffer.size = vsfstream_write(shell->stream_tx, &buffer);
 				shell->printf_pos += buffer.size;
 				str_len = strlen(shell->printf_pos);
 			}
@@ -139,11 +139,11 @@ vsf_err_t vsfshell_output_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 
 	while (str_len > 0)
 	{
-		size_avail = stream_get_free_size(shell->stream_tx);
+		size_avail = vsfstream_get_free_size(shell->stream_tx);
 		if (!size_avail)
 		{
 			vsfsm_pt_wfe(pt, VSFSHELL_EVT_STREAMTX_ONOUT);
-			size_avail = stream_get_free_size(shell->stream_tx);
+			size_avail = vsfstream_get_free_size(shell->stream_tx);
 			str_len = strlen(shell->printf_pos);
 		}
 
@@ -151,7 +151,7 @@ vsf_err_t vsfshell_output_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 		{
 			buffer.buffer = (uint8_t *)shell->printf_pos;
 			buffer.size = min(str_len, size_avail);
-			buffer.size = stream_write(shell->stream_tx, &buffer);
+			buffer.size = vsfstream_write(shell->stream_tx, &buffer);
 			shell->printf_pos += buffer.size;
 			str_len = strlen(shell->printf_pos);
 		}
@@ -351,7 +351,7 @@ vsf_err_t vsfshell_input_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 		{
 			buffer.buffer = (uint8_t *)&shell->ch;
 			buffer.size = 1;
-			buffer.size = stream_read(shell->stream_rx, &buffer);
+			buffer.size = vsfstream_read(shell->stream_rx, &buffer);
 			if (0 == buffer.size)
 			{
 				break;
@@ -455,8 +455,8 @@ vsfshell_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		// default input sm is shell itself
 		shell->input_sm = &shell->sm;
 
-		stream_connect_rx(shell->stream_rx);
-		stream_connect_tx(shell->stream_tx);
+		vsfstream_connect_rx(shell->stream_rx);
+		vsfstream_connect_tx(shell->stream_tx);
 		break;
 	case VSFSHELL_EVT_STREAMRX_ONCONN:
 		break;

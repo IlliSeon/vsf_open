@@ -184,6 +184,12 @@ PACKED_HEAD struct PACKED_MID vsfip_tcphead_t
 	uint32_t ackseq;
 	uint8_t headlen;
 	uint8_t flags;
+#define VSFIP_TCPFLAG_FIN		(uint16_t)(1 << 0)
+#define VSFIP_TCPFLAG_SYN		(uint16_t)(1 << 1)
+#define VSFIP_TCPFLAG_RST		(uint16_t)(1 << 2)
+#define VSFIP_TCPFLAG_PSH		(uint16_t)(1 << 3)
+#define VSFIP_TCPFLAG_ACK		(uint16_t)(1 << 4)
+#define VSFIP_TCPFLAG_URG		(uint16_t)(1 << 5)
 	uint16_t window_size;
 	uint16_t checksum;
 	uint16_t urgent_ptr;
@@ -271,7 +277,7 @@ struct vsfip_socket_t
 	bool can_rx;
 	struct
 	{
-		struct vsfip_socket_t *child;
+		struct vsflist_t child;
 		uint8_t backlog;
 		uint8_t accepted_num;
 		bool closing;
@@ -295,16 +301,15 @@ struct vsfip_socket_t
 		void *param;
 	} user_callback;
 
-	struct vsfip_socket_t *next;
+	struct vsflist_t list;
 };
 
 struct vsfip_t
 {
-	struct vsfip_netif_t *netif_list;
-	struct vsfip_netif_t *netif_default;
+	struct vsflist_t netif_list;
 
-	struct vsfip_socket_t *udpconns;
-	struct vsfip_socket_t *tcpconns;
+	struct vsflist_t udpconns;
+	struct vsflist_t tcpconns;
 
 	struct vsfsm_t tick_sm;
 	struct vsftimer_t tick_timer;
@@ -316,9 +321,9 @@ struct vsfip_t
 
 	bool quit;
 	struct vsfip_mem_op_t *mem_op;
-	void (*input_sniffer)(struct vsfip_buffer_t *buf);
-	void (*output_sniffer)(struct vsfip_buffer_t *buf);
+	struct vsfip_netif_t* (*ip_route)(struct vsfip_ipaddr_t *addr);
 };
+extern struct vsfip_t vsfip;
 
 struct vsfip_mem_op_t
 {

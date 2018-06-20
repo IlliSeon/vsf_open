@@ -853,7 +853,6 @@ void USB_Istr(void)
 				{
 					M480_USBD_EP_REG(i, EP[0].EPINTEN) &= ~HSUSBD_EPINTEN_RXPKIEN_Msk;
 					M480_USBD_EP_REG(i, EP[0].EPINTSTS) = HSUSBD_EPINTSTS_RXPKIF_Msk;
-
 					vsfhal_usbd_cb(VSFHAL_USBD_ON_OUT, ep);
 				}
 			}

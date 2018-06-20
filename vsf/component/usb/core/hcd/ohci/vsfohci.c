@@ -337,11 +337,11 @@ static void iso_td_fill(uint32_t info, void *data, uint16_t len, uint16_t index,
 
 static void td_submit_urb(struct vsfohci_t *ohci, struct vsfhcd_urb_t *urb)
 {
-	uint32_t data_len, info, cnt = 0, n;
-	void *data;
 	struct urb_priv_t *urb_priv = (struct urb_priv_t *)urb->priv;
 	struct ohci_regs_t *regs = ohci->regs;
 	uint8_t isout = usb_pipeout(urb->pipe);
+	uint32_t data_len, info, cnt = 0, n, m;
+	void *data;
 
 	data = urb->transfer_buffer;
 	data_len = urb->transfer_length;
@@ -352,11 +352,18 @@ static void td_submit_urb(struct vsfohci_t *ohci, struct vsfhcd_urb_t *urb)
 	case PIPE_CONTROL:
 		info = TD_CC | TD_DP_SETUP | TD_T_DATA0;
 		td_fill(info, (void *)&urb->setup_packet, 8, cnt++, urb_priv);
-		if (data_len > 0)
+		info = isout ? TD_CC | TD_DP_OUT | TD_T_DATA1 :
+					TD_CC | TD_DP_IN | TD_T_DATA1;
+		m = data_len;
+		while (m)
 		{
-			info = isout ? TD_CC | TD_R | TD_DP_OUT | TD_T_DATA1 :
-					TD_CC | TD_R | TD_DP_IN | TD_T_DATA1;
-			td_fill(info, data, data_len, cnt++, urb_priv);
+			n = min(m, 4096);
+			m -= n;
+
+			if (!m) info |= TD_R;
+			td_fill(info, data, n, cnt++, urb_priv);
+			data = (void *)((uint32_t)data + n);
+			info &= ~TD_T;
 		}
 		info = (isout || data_len == 0) ? (TD_CC | TD_DP_IN | TD_T_DATA1) :
 					(TD_CC | TD_DP_OUT | TD_T_DATA1);
@@ -372,8 +379,8 @@ static void td_submit_urb(struct vsfohci_t *ohci, struct vsfhcd_urb_t *urb)
 			n = min(data_len, 4096);
 			data_len -= n;
 
-			if (!data_len && !(urb->transfer_flags & URB_SHORT_NOT_OK))
-				info |= isout ? 0 : TD_R;
+			if (!data_len && !(urb->transfer_flags & URB_SHORT_NOT_OK) && !isout)
+				info |= TD_R;
 			td_fill(info, data, n, cnt++, urb_priv);
 			data = (void *)((uint32_t)data + n);
 		}

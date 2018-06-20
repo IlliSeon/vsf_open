@@ -484,7 +484,7 @@ static uint8_t bufmgr_log_buf[VSF_BUFMGR_LOG_BUF_LENGTH + 1];
 struct vsf_bufmgr_mcb_t
 {
 	struct vsf_buffer_t buffer;
-	struct sllist list;
+	struct vsflist_t list;
 #if VSF_BUFMGR_POINT_CHECK_EN
 	void *p;
 #endif
@@ -528,26 +528,26 @@ static void vsf_bufmgr_remove_mcb(struct vsf_bufmgr_mcb_t *list, struct vsf_bufm
 {
 	struct vsf_bufmgr_mcb_t *active_mcb, *next_mcb, *prev_mcb;
 
-	active_mcb = sllist_get_container(list->list.next, struct vsf_bufmgr_mcb_t, list);
+	active_mcb = vsflist_get_container(list->list.next, struct vsf_bufmgr_mcb_t, list);
 	prev_mcb = list;
 	while(active_mcb != NULL)
 	{
 		if(active_mcb == mcb)
 		{
-			next_mcb = sllist_get_container(active_mcb->list.next, struct vsf_bufmgr_mcb_t, list);
+			next_mcb = vsflist_get_container(active_mcb->list.next, struct vsf_bufmgr_mcb_t, list);
 			if(next_mcb != NULL)
 			{
-				sllist_insert(prev_mcb->list, next_mcb->list);
+				vsflist_insert(prev_mcb->list, next_mcb->list);
 			}
 			else
 			{
-				sllist_init_node(prev_mcb->list);
+				vsflist_init_node(prev_mcb->list);
 			}
-			sllist_init_node(active_mcb->list);
+			vsflist_init_node(active_mcb->list);
 			return;
 		}
 		prev_mcb = active_mcb;
-		active_mcb = sllist_get_container(active_mcb->list.next, struct vsf_bufmgr_mcb_t, list);
+		active_mcb = vsflist_get_container(active_mcb->list.next, struct vsf_bufmgr_mcb_t, list);
 	}
 }
 
@@ -559,24 +559,24 @@ static void vsf_bufmgr_insert_mcb(struct vsf_bufmgr_mcb_t *list, struct vsf_bufm
 	VSF_BUFMGR_INIT_BUF(mcb);
 #endif
 
-	active_mcb = sllist_get_container(list->list.next, struct vsf_bufmgr_mcb_t, list);
+	active_mcb = vsflist_get_container(list->list.next, struct vsf_bufmgr_mcb_t, list);
 	prev_mcb = list;
 
 	while (active_mcb != NULL)
 	{
 		if(active_mcb->buffer.size >= mcb->buffer.size)
 		{
-			sllist_insert(prev_mcb->list, mcb->list);
-			sllist_insert(mcb->list, active_mcb->list);
+			vsflist_insert(prev_mcb->list, mcb->list);
+			vsflist_insert(mcb->list, active_mcb->list);
 			return;
 		}
 		prev_mcb = active_mcb;
-		active_mcb = sllist_get_container(active_mcb->list.next, struct vsf_bufmgr_mcb_t, list);
+		active_mcb = vsflist_get_container(active_mcb->list.next, struct vsf_bufmgr_mcb_t, list);
 	}
 	if(active_mcb == NULL)
 	{
-		sllist_insert(prev_mcb->list, mcb->list);
-		sllist_init_node(mcb->list);
+		vsflist_insert(prev_mcb->list, mcb->list);
+		vsflist_init_node(mcb->list);
 	}
 }
 
@@ -584,7 +584,7 @@ static void vsf_bufmgr_merge_mcb(struct vsf_bufmgr_mcb_t *list, struct vsf_bufmg
 {
 	struct vsf_bufmgr_mcb_t *active_mcb, *prev_mcb = NULL, *next_mcb = NULL;
 
-	active_mcb = sllist_get_container(list->list.next, struct vsf_bufmgr_mcb_t, list);
+	active_mcb = vsflist_get_container(list->list.next, struct vsf_bufmgr_mcb_t, list);
 
 	while (active_mcb != NULL)
 	{
@@ -596,7 +596,7 @@ static void vsf_bufmgr_merge_mcb(struct vsf_bufmgr_mcb_t *list, struct vsf_bufmg
 		{
 			prev_mcb = active_mcb;
 		}
-		active_mcb = sllist_get_container(active_mcb->list.next, struct vsf_bufmgr_mcb_t, list);
+		active_mcb = vsflist_get_container(active_mcb->list.next, struct vsf_bufmgr_mcb_t, list);
 	}
 	if((next_mcb == NULL) && (prev_mcb == NULL))
 	{
@@ -635,16 +635,16 @@ void vsf_bufmgr_init(uint8_t *buf, uint32_t size)
 
 	bufmgr.freed_list.buffer.buffer = NULL;
 	bufmgr.freed_list.buffer.size = 0;
-	sllist_init_node(bufmgr.freed_list.list);
+	vsflist_init_node(bufmgr.freed_list.list);
 
 	bufmgr.allocated_list.buffer.buffer = NULL;
 	bufmgr.allocated_list.buffer.size = 0;
-	sllist_init_node(bufmgr.allocated_list.list);
+	vsflist_init_node(bufmgr.allocated_list.list);
 
-	mcb->buffer.buffer = (void *)(((uint32_t)buf + MCB_SIZE + 3) & 0xfffffffc);
+	mcb->buffer.buffer = (uint8_t *)(((uint32_t)buf + MCB_SIZE + 3) & 0xfffffffc);
 	mcb->buffer.size = (uint32_t)buf + size - (uint32_t)mcb->buffer.buffer;
-	sllist_init_node(mcb->list);
-	sllist_insert(bufmgr.freed_list.list, mcb->list);
+	vsflist_init_node(mcb->list);
+	vsflist_insert(bufmgr.freed_list.list, mcb->list);
 
 #if VSF_BUFMGR_BUF_CHECK_EN
 	bufmgr.err_conut = 0;
@@ -658,10 +658,8 @@ void* vsf_bufmgr_malloc_aligned_do(uint32_t size, uint32_t align,
 void* vsf_bufmgr_malloc_aligned(uint32_t size, uint32_t align)
 #endif
 {
-#ifdef VSFCFG_THREAD_SAFTY
-	uint8_t origlevel = vsfhal_core_set_intlevel(VSFCFG_MAX_SRT_PRIO);
-#endif
-	struct vsf_bufmgr_mcb_t *mcb= sllist_get_container(
+	uint8_t origlevel = vsfsm_sched_lock();
+	struct vsf_bufmgr_mcb_t *mcb = vsflist_get_container(
 				bufmgr.freed_list.list.next, struct vsf_bufmgr_mcb_t, list);
 #ifdef VSFCFG_BUFMGR_LOG
 	va_list ap;
@@ -673,9 +671,7 @@ void* vsf_bufmgr_malloc_aligned(uint32_t size, uint32_t align)
 
 	if (size == 0)
 	{
-#ifdef VSFCFG_THREAD_SAFTY
-		vsfhal_core_set_intlevel(origlevel);
-#endif
+		vsfsm_sched_unlock(origlevel);
 		return NULL;
 	}
 	if (size & 0x3)
@@ -746,12 +742,10 @@ void* vsf_bufmgr_malloc_aligned(uint32_t size, uint32_t align)
 #if VSF_BUFMGR_POINT_CHECK_EN
 			mcb_align->p = ptr;
 #endif
-#ifdef VSFCFG_THREAD_SAFTY
-			vsfhal_core_set_intlevel(origlevel);
-#endif
+			vsfsm_sched_unlock(origlevel);
 			return ptr;
 		}
-		mcb = sllist_get_container(mcb->list.next, struct vsf_bufmgr_mcb_t,
+		mcb = vsflist_get_container(mcb->list.next, struct vsf_bufmgr_mcb_t,
 									list);
 	}
 
@@ -770,9 +764,7 @@ void* vsf_bufmgr_malloc_aligned(uint32_t size, uint32_t align)
 #if VSF_BUFMGR_BUF_CHECK_EN
 	vsf_bufmgr_error();
 #endif
-#ifdef VSFCFG_THREAD_SAFTY
-	vsfhal_core_set_intlevel(origlevel);
-#endif
+	vsfsm_sched_unlock(origlevel);
 	return NULL;
 }
 
@@ -782,10 +774,8 @@ void vsf_bufmgr_free_do(void *ptr, const char *format, ...)
 void vsf_bufmgr_free(void *ptr)
 #endif
 {
-#ifdef VSFCFG_THREAD_SAFTY
-	uint8_t origlevel = vsfhal_core_set_intlevel(VSFCFG_MAX_SRT_PRIO);
-#endif
-	struct vsf_bufmgr_mcb_t *mcb = sllist_get_container(
+	uint8_t origlevel = vsfsm_sched_lock();
+	struct vsf_bufmgr_mcb_t *mcb = vsflist_get_container(
 			bufmgr.allocated_list.list.next,struct vsf_bufmgr_mcb_t, list);											 
 #ifdef VSFCFG_BUFMGR_LOG
 	va_list ap;
@@ -825,12 +815,10 @@ void vsf_bufmgr_free(void *ptr)
 				vsfdbg_printf("FreeOK 0x%x" VSFCFG_DEBUG_LINEEND, (uint32_t)ptr);
 			}
 #endif
-#ifdef VSFCFG_THREAD_SAFTY
-			vsfhal_core_set_intlevel(origlevel);
-#endif
+			vsfsm_sched_unlock(origlevel);
 			return;
 		}
-		mcb = sllist_get_container(mcb->list.next, struct vsf_bufmgr_mcb_t,
+		mcb = vsflist_get_container(mcb->list.next, struct vsf_bufmgr_mcb_t,
 									list);
 	}
 
@@ -850,9 +838,7 @@ void vsf_bufmgr_free(void *ptr)
 #if VSF_BUFMGR_BUF_CHECK_EN
 	vsf_bufmgr_error();
 #endif
-#ifdef VSFCFG_THREAD_SAFTY
-	vsfhal_core_set_intlevel(origlevel);
-#endif
+	vsfsm_sched_unlock(origlevel);
 }
 #endif
 

@@ -39,7 +39,7 @@ vsfip_telnetd_session_tx_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	session->caller_txpt.sm = pt->sm;
 	while (!session->disconnect)
 	{
-		len = stream_get_data_size(session->stream_tx);
+		len = vsfstream_get_data_size(session->stream_tx);
 		if (!len && vsfsm_sem_pend(&session->stream_tx_sem, pt->sm))
 		{
 			vsfsm_pt_wfe(pt, VSFIP_TELNETD_EVT_STREAM_IN);
@@ -59,7 +59,7 @@ vsfip_telnetd_session_tx_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 		}
 
 		session->outbuf->app.size =
-					stream_read(session->stream_tx, &session->outbuf->app);
+					vsfstream_read(session->stream_tx, &session->outbuf->app);
 		if (!session->outbuf->app.size)
 		{
 			vsfip_buffer_release(session->outbuf);
@@ -122,7 +122,7 @@ vsfip_telnetd_session_rx_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 
 		while (session->inbuf->app.size > 0)
 		{
-			len = stream_write(session->stream_rx, &session->inbuf->app);
+			len = vsfstream_write(session->stream_rx, &session->inbuf->app);
 			if (!len && vsfsm_sem_pend(&session->stream_rx_sem, pt->sm))
 			{
 				vsfsm_pt_wfe(pt, VSFIP_TELNETD_EVT_STREAM_OUT);
@@ -189,8 +189,8 @@ static vsf_err_t vsfip_telnetd_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 				session->stream_tx->callback_rx.param = session;
 				session->stream_tx->callback_rx.on_inout =
 											vsfip_telnetd_session_stream_on_in;
-				stream_connect_tx(session->stream_rx);
-				stream_connect_rx(session->stream_tx);
+				vsfstream_connect_tx(session->stream_rx);
+				vsfstream_connect_rx(session->stream_tx);
 
 				vsfsm_sem_init(&session->stream_tx_sem, 0,
 											VSFIP_TELNETD_EVT_STREAM_IN);

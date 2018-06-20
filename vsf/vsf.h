@@ -31,11 +31,13 @@
 #include "framework/vsfsm/vsfsm.h"
 #include "framework/vsftimer/vsftimer.h"
 
-#include "component/fundation/buffer/buffer.h"
-#include "component/fundation/stream/stream.h"
+#include "component/fundation/buffer/vsfbuffer.h"
+#include "component/fundation/stream/vsfstream.h"
 #include "component/stream/usart_stream/usart_stream.h"
 
 #include "component/tool/dynpool/vsf_dynpool.h"
+#include "component/tool/dynarr/vsf_dynarr.h"
+#include "component/tool/dynstack/vsf_dynstack.h"
 
 #include "component/mal/vsfmal.h"
 #include "component/mal/vsfscsi.h"

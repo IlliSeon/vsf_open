@@ -236,7 +236,7 @@ vsf_malstream_read_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	malstream->offset = 0;
 	while (malstream->offset < malstream->size)
 	{
-		while (stream_get_free_size(stream) < mal->op_block_size)
+		while (vsfstream_get_free_size(stream) < mal->op_block_size)
 		{
 			stream->callback_tx.on_inout = vsf_malstream_on_inout;
 			vsfsm_pt_wfe(pt, VSF_MALSTREAM_ON_INOUT);
@@ -265,7 +265,7 @@ vsf_malstream_read_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	}
 
 end:
-	stream_disconnect_tx(stream);
+	vsfstream_disconnect_tx(stream);
 	if (malstream->cb.on_finish != NULL)
 	{
 		malstream->cb.on_finish(malstream->cb.param);
@@ -287,7 +287,7 @@ vsf_err_t vsf_malstream_read(struct vsf_malstream_t *malstream, uint64_t addr,
 	stream->callback_tx.on_inout = NULL;
 	stream->callback_tx.on_connect = NULL;
 	stream->callback_tx.on_disconnect = NULL;
-	stream_connect_tx(stream);
+	vsfstream_connect_tx(stream);
 
 	malstream->pt.thread = vsf_malstream_read_thread;
 	malstream->pt.user_data = malstream;
@@ -315,7 +315,7 @@ vsf_malstream_write_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	malstream->offset = 0;
 	while (malstream->offset < malstream->size)
 	{
-		while (stream_get_data_size(stream) < mal->op_block_size)
+		while (vsfstream_get_data_size(stream) < mal->op_block_size)
 		{
 			stream->callback_rx.on_inout = vsf_malstream_on_inout;
 			vsfsm_pt_wfe(pt, VSF_MALSTREAM_ON_INOUT);
@@ -344,7 +344,7 @@ vsf_malstream_write_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	}
 
 end:
-	stream_disconnect_rx(stream);
+	vsfstream_disconnect_rx(stream);
 	if (malstream->cb.on_finish != NULL)
 	{
 		malstream->cb.on_finish(malstream->cb.param);
@@ -366,7 +366,7 @@ vsf_err_t vsf_malstream_write(struct vsf_malstream_t *malstream, uint64_t addr,
 	stream->callback_rx.on_inout = NULL;
 	stream->callback_rx.on_connect = NULL;
 	stream->callback_rx.on_disconnect = NULL;
-	stream_connect_rx(stream);
+	vsfstream_connect_rx(stream);
 
 	malstream->pt.thread = vsf_malstream_write_thread;
 	malstream->pt.user_data = malstream;

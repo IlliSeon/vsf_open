@@ -150,6 +150,7 @@ uint32_t vsfhal_spi_stop(uint8_t index);
 /*******************************************************************************
 SDIO
 *******************************************************************************/
+#ifdef VSFHAL_HAS_SDIO
 #define VSFHAL_SDIO_WRITE_NORESP		0
 #define VSFHAL_SDIO_WRITE_SHORTRESP		0x40
 #define VSFHAL_SDIO_WRITE_LONGRESP		0x80
@@ -188,6 +189,7 @@ vsf_err_t vsfhal_sdio_stop(vsfhal_sdio_t index);
 vsf_err_t vsfhal_sdio_config_d1int(vsfhal_sdio_t index,
 		void (*callback)(void *param), void *param);
 vsf_err_t vsfhal_sdio_enable_d1int(vsfhal_sdio_t index);
+#endif
 
 /*******************************************************************************
 PWM

@@ -260,6 +260,9 @@ void vsfsm_pt_entry(struct vsfsm_pt_t *pt);
 // vsfsm_get_event_pending should be called with interrupt disabled
 uint32_t vsfsm_get_event_pending(void);
 
+uint8_t vsfsm_sched_lock(void);
+void vsfsm_sched_unlock(uint8_t origlevel);
+
 #if (VSFSM_CFG_SM_EN && VSFSM_CFG_SUBSM_EN) || VSFSM_CFG_HSM_EN
 extern struct vsfsm_state_t vsfsm_top;
 // sub-statemachine add/remove

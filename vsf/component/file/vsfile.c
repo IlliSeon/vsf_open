@@ -195,7 +195,7 @@ vsf_err_t vsfile_mount(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 						struct vsfile_fsop_t *op, struct vsfile_t *dir)
 {
 	// can only mount under vfs directory
-	if (dir->op != &vsfile_vfs_op)
+	if (!(dir->attr & VSFILE_ATTR_DIRECTORY) && (dir->op != &vsfile_vfs_op))
 	{
 		return VSFERR_FAIL;
 	}
@@ -408,7 +408,7 @@ static vsf_err_t vsfile_vfs_getchild(struct vsfsm_pt_t *pt,
 	}
 	else
 	{
-		struct vsfile_vfsfile_t *child = vfsfile->dir.child;
+		struct vsfile_vfsfile_t *child = vfsfile->d.child;
 
 		while (child != NULL)
 		{
@@ -431,9 +431,7 @@ static vsf_err_t vsfile_vfs_addfile(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	struct vsfile_vfsfile_t *vfsfile = (struct vsfile_vfsfile_t *)dir;
 	struct vsfile_vfsfile_t *newfile;
 
-	// can only add directory to vfs
-	if (!(attr & VSFILE_ATTR_DIRECTORY) ||
-		!vsfile_vfs_getchild(NULL, 0, dir, name, 0,
+	if (!vsfile_vfs_getchild(NULL, 0, dir, name, 0,
 									(struct vsfile_t **)&newfile))
 	{
 		return VSFERR_FAIL;
@@ -449,8 +447,8 @@ static vsf_err_t vsfile_vfs_addfile(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	newfile->file.name = name;
 	newfile->file.attr = attr;
 	newfile->file.op = (struct vsfile_fsop_t *)&vsfile_vfs_op;
-	newfile->next = vfsfile->dir.child;
-	vfsfile->dir.child = newfile;
+	newfile->next = vfsfile->d.child;
+	vfsfile->d.child = newfile;
 	return VSFERR_NONE;
 }
 
@@ -458,7 +456,7 @@ static vsf_err_t vsfile_vfs_removefile(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 					struct vsfile_t *dir, char *name)
 {
 	struct vsfile_vfsfile_t *vfsfile = (struct vsfile_vfsfile_t *)dir;
-	struct vsfile_vfsfile_t *child = vfsfile->dir.child, *oldfile;
+	struct vsfile_vfsfile_t *child = vfsfile->d.child, *oldfile;
 
 	if (vsfile_vfs_getchild(NULL, 0, dir, name, 0,
 									(struct vsfile_t **)&oldfile))
@@ -468,7 +466,7 @@ static vsf_err_t vsfile_vfs_removefile(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 
 	if (child == oldfile)
 	{
-		vfsfile->dir.child = oldfile->next;
+		vfsfile->d.child = oldfile->next;
 	}
 	else while (child != NULL)
 	{

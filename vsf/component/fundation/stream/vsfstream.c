@@ -19,7 +19,7 @@
 
 #include "vsf.h"
 
-uint32_t stream_read(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer)
+uint32_t vsfstream_read(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer)
 {
 	uint32_t count = stream->op->read(stream, buffer);
 
@@ -30,7 +30,7 @@ uint32_t stream_read(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer)
 	return count;
 }
 
-uint32_t stream_write(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer)
+uint32_t vsfstream_write(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer)
 {
 	uint32_t count = stream->op->write(stream, buffer);
 
@@ -45,27 +45,27 @@ uint32_t stream_write(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer)
 	return count;
 }
 
-uint32_t stream_get_data_size(struct vsf_stream_t *stream)
+uint32_t vsfstream_get_data_size(struct vsf_stream_t *stream)
 {
 	return stream->op->get_data_length(stream);
 }
 
-uint32_t stream_get_free_size(struct vsf_stream_t *stream)
+uint32_t vsfstream_get_free_size(struct vsf_stream_t *stream)
 {
 	return stream->op->get_avail_length(stream);
 }
 
-uint32_t stream_get_wbuf(struct vsf_stream_t *stream, uint8_t **ptr)
+uint32_t vsfstream_get_wbuf(struct vsf_stream_t *stream, uint8_t **ptr)
 {
 	return stream->op->get_wbuf(stream, ptr);
 }
 
-uint32_t stream_get_rbuf(struct vsf_stream_t *stream, uint8_t **ptr)
+uint32_t vsfstream_get_rbuf(struct vsf_stream_t *stream, uint8_t **ptr)
 {
 	return stream->op->get_rbuf(stream, ptr);
 }
 
-void stream_connect_rx(struct vsf_stream_t *stream)
+void vsfstream_connect_rx(struct vsf_stream_t *stream)
 {
 	if (!stream->rx_ready)
 	{
@@ -81,7 +81,7 @@ void stream_connect_rx(struct vsf_stream_t *stream)
 	}
 }
 
-void stream_connect_tx(struct vsf_stream_t *stream)
+void vsfstream_connect_tx(struct vsf_stream_t *stream)
 {
 	if (!stream->tx_ready)
 	{
@@ -97,7 +97,7 @@ void stream_connect_tx(struct vsf_stream_t *stream)
 	}
 }
 
-void stream_disconnect_rx(struct vsf_stream_t *stream)
+void vsfstream_disconnect_rx(struct vsf_stream_t *stream)
 {
 	if (stream->rx_ready && (stream->callback_tx.on_disconnect != NULL))
 	{
@@ -106,7 +106,7 @@ void stream_disconnect_rx(struct vsf_stream_t *stream)
 	stream->rx_ready = false;
 }
 
-void stream_disconnect_tx(struct vsf_stream_t *stream)
+void vsfstream_disconnect_tx(struct vsf_stream_t *stream)
 {
 	if (stream->tx_ready && (stream->callback_rx.on_disconnect != NULL))
 	{
@@ -115,7 +115,7 @@ void stream_disconnect_tx(struct vsf_stream_t *stream)
 	stream->tx_ready = false;
 }
 
-vsf_err_t stream_init(struct vsf_stream_t *stream)
+vsf_err_t vsfstream_init(struct vsf_stream_t *stream)
 {
 	stream->overflow = false;
 	stream->tx_ready = false;
@@ -127,15 +127,15 @@ vsf_err_t stream_init(struct vsf_stream_t *stream)
 	return VSFERR_NONE;
 }
 
-vsf_err_t stream_fini(struct vsf_stream_t *stream)
+vsf_err_t vsfstream_fini(struct vsf_stream_t *stream)
 {
 	if (stream->tx_ready)
 	{
-		stream_disconnect_tx(stream);
+		vsfstream_disconnect_tx(stream);
 	}
 	if (stream->rx_ready)
 	{
-		stream_disconnect_rx(stream);
+		vsfstream_disconnect_rx(stream);
 	}
 	if (stream->op->fini != NULL)
 	{
@@ -145,52 +145,52 @@ vsf_err_t stream_fini(struct vsf_stream_t *stream)
 }
 
 // fifo stream
-static void fifo_stream_init(struct vsf_stream_t *stream)
+static void vsf_fifostream_init(struct vsf_stream_t *stream)
 {
 	struct vsf_fifostream_t *fifostream = (struct vsf_fifostream_t *)stream;
 	vsf_fifo_init(&fifostream->mem);
 }
 
-static uint32_t fifo_stream_get_data_length(struct vsf_stream_t *stream)
+static uint32_t vsf_fifostream_get_data_length(struct vsf_stream_t *stream)
 {
 	struct vsf_fifostream_t *fifostream = (struct vsf_fifostream_t *)stream;
 	return vsf_fifo_get_data_length(&fifostream->mem);
 }
 
-static uint32_t fifo_stream_get_avail_length(struct vsf_stream_t *stream)
+static uint32_t vsf_fifostream_get_avail_length(struct vsf_stream_t *stream)
 {
 	struct vsf_fifostream_t *fifostream = (struct vsf_fifostream_t *)stream;
 	return vsf_fifo_get_avail_length(&fifostream->mem);
 }
 
-static uint32_t fifo_stream_get_wbuf(struct vsf_stream_t *stream, uint8_t **ptr)
+static uint32_t vsf_fifostream_get_wbuf(struct vsf_stream_t *stream, uint8_t **ptr)
 {
 	struct vsf_fifostream_t *fifostream = (struct vsf_fifostream_t *)stream;
 	return vsf_fifo_get_wbuf(&fifostream->mem, ptr);
 }
 
-static uint32_t fifo_stream_get_rbuf(struct vsf_stream_t *stream, uint8_t **ptr)
+static uint32_t vsf_fifostream_get_rbuf(struct vsf_stream_t *stream, uint8_t **ptr)
 {
 	struct vsf_fifostream_t *fifostream = (struct vsf_fifostream_t *)stream;
 	return vsf_fifo_get_rbuf(&fifostream->mem, ptr);
 }
 
 static uint32_t
-fifo_stream_write(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer)
+vsf_fifostream_write(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer)
 {
 	struct vsf_fifostream_t *fifostream = (struct vsf_fifostream_t *)stream;
 	return vsf_fifo_push(&fifostream->mem, buffer->size, buffer->buffer);
 }
 
 static uint32_t
-fifo_stream_read(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer)
+vsf_fifostream_read(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer)
 {
 	struct vsf_fifostream_t *fifostream = (struct vsf_fifostream_t *)stream;
 	return vsf_fifo_pop(&fifostream->mem, buffer->size, buffer->buffer);
 }
 
 // multibuf stream
-static void multibuf_stream_init(struct vsf_stream_t *stream)
+static void vsf_mbufstream_init(struct vsf_stream_t *stream)
 {
 	struct vsf_mbufstream_t *mbufstream = (struct vsf_mbufstream_t *)stream;
 
@@ -198,7 +198,7 @@ static void multibuf_stream_init(struct vsf_stream_t *stream)
 	vsf_multibuf_init(&mbufstream->mem.multibuf);
 }
 
-static uint32_t multibuf_stream_get_data_length(struct vsf_stream_t *stream)
+static uint32_t vsf_mbufstream_get_data_length(struct vsf_stream_t *stream)
 {
 	struct vsf_mbufstream_t *mbufstream = (struct vsf_mbufstream_t *)stream;
 
@@ -206,20 +206,20 @@ static uint32_t multibuf_stream_get_data_length(struct vsf_stream_t *stream)
 				+ mbufstream->mem.wpos - mbufstream->mem.rpos;
 }
 
-static uint32_t multibuf_stream_get_avail_length(struct vsf_stream_t *stream)
+static uint32_t vsf_mbufstream_get_avail_length(struct vsf_stream_t *stream)
 {
 	struct vsf_mbufstream_t *mbufstream = (struct vsf_mbufstream_t *)stream;
 
 	return (mbufstream->mem.multibuf.count * mbufstream->mem.multibuf.size) -
-								multibuf_stream_get_data_length(stream);
+								vsf_mbufstream_get_data_length(stream);
 }
 
 static uint32_t
-multibuf_stream_get_wbuf(struct vsf_stream_t *stream, uint8_t **ptr)
+vsf_mbufstream_get_wbuf(struct vsf_stream_t *stream, uint8_t **ptr)
 {
 	struct vsf_mbufstream_t *mbufstream = (struct vsf_mbufstream_t *)stream;
 	uint8_t *buf = vsf_multibuf_get_empty(&mbufstream->mem.multibuf);
-	uint32_t avail_len = STREAM_GET_FREE_SIZE(&mbufstream->mem.multibuf);
+	uint32_t avail_len = VSFSTREAM_GET_FREE_SIZE(&mbufstream->mem.multibuf);
 	uint32_t avail_buf = mbufstream->mem.multibuf.size - mbufstream->mem.wpos;
 
 	if (ptr)
@@ -228,11 +228,11 @@ multibuf_stream_get_wbuf(struct vsf_stream_t *stream, uint8_t **ptr)
 }
 
 static uint32_t
-multibuf_stream_get_rbuf(struct vsf_stream_t *stream, uint8_t **ptr)
+vsf_mbufstream_get_rbuf(struct vsf_stream_t *stream, uint8_t **ptr)
 {
 	struct vsf_mbufstream_t *mbufstream = (struct vsf_mbufstream_t *)stream;
 	uint8_t *buf = vsf_multibuf_get_payload(&mbufstream->mem.multibuf);
-	uint32_t avail_len = STREAM_GET_DATA_SIZE(&mbufstream->mem.multibuf);
+	uint32_t avail_len = VSFSTREAM_GET_DATA_SIZE(&mbufstream->mem.multibuf);
 	uint32_t avail_buf = mbufstream->mem.multibuf.size - mbufstream->mem.rpos;
 
 	if (ptr)
@@ -241,7 +241,7 @@ multibuf_stream_get_rbuf(struct vsf_stream_t *stream, uint8_t **ptr)
 }
 
 static uint32_t
-multibuf_stream_write(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer)
+vsf_mbufstream_write(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer)
 {
 	struct vsf_mbufstream_t *mbufstream = (struct vsf_mbufstream_t *)stream;
 	uint8_t *buf = vsf_multibuf_get_empty(&mbufstream->mem.multibuf);
@@ -268,7 +268,7 @@ multibuf_stream_write(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer)
 }
 
 static uint32_t
-multibuf_stream_read(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer)
+vsf_mbufstream_read(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer)
 {
 	struct vsf_mbufstream_t *mbufstream = (struct vsf_mbufstream_t *)stream;
 	uint8_t *buf = vsf_multibuf_get_payload(&mbufstream->mem.multibuf);
@@ -295,20 +295,20 @@ multibuf_stream_read(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer)
 }
 
 // buffer stream
-static void buffer_stream_init(struct vsf_stream_t *stream)
+static void vsf_bufstream_init(struct vsf_stream_t *stream)
 {
 	struct vsf_bufstream_t *bufstream = (struct vsf_bufstream_t *)stream;
 	bufstream->mem.pos = 0;
 }
 
-static uint32_t buffer_stream_get_data_length(struct vsf_stream_t *stream)
+static uint32_t vsf_bufstream_get_data_length(struct vsf_stream_t *stream)
 {
 	struct vsf_bufstream_t *bufstream = (struct vsf_bufstream_t *)stream;
 	return !bufstream->mem.read ? bufstream->mem.pos :
 						bufstream->mem.buffer.size - bufstream->mem.pos;
 }
 
-static uint32_t buffer_stream_get_avail_length(struct vsf_stream_t *stream)
+static uint32_t vsf_bufstream_get_avail_length(struct vsf_stream_t *stream)
 {
 	struct vsf_bufstream_t *bufstream = (struct vsf_bufstream_t *)stream;
 	return bufstream->mem.read ? bufstream->mem.pos :
@@ -316,7 +316,7 @@ static uint32_t buffer_stream_get_avail_length(struct vsf_stream_t *stream)
 }
 
 static uint32_t
-buffer_stream_get_wbuf(struct vsf_stream_t *stream, uint8_t **ptr)
+vsf_bufstream_get_wbuf(struct vsf_stream_t *stream, uint8_t **ptr)
 {
 	struct vsf_bufstream_t *bufstream = (struct vsf_bufstream_t *)stream;
 	uint8_t *p = NULL;
@@ -325,7 +325,7 @@ buffer_stream_get_wbuf(struct vsf_stream_t *stream, uint8_t **ptr)
 	if (!bufstream->mem.read)
 	{
 		p = bufstream->mem.buffer.buffer + bufstream->mem.pos;
-		size = buffer_stream_get_avail_length(stream);
+		size = vsf_bufstream_get_avail_length(stream);
 	}
 
 	if (ptr)
@@ -334,7 +334,7 @@ buffer_stream_get_wbuf(struct vsf_stream_t *stream, uint8_t **ptr)
 }
 
 static uint32_t
-buffer_stream_get_rbuf(struct vsf_stream_t *stream, uint8_t **ptr)
+vsf_bufstream_get_rbuf(struct vsf_stream_t *stream, uint8_t **ptr)
 {
 	struct vsf_bufstream_t *bufstream = (struct vsf_bufstream_t *)stream;
 	uint8_t *p = NULL;
@@ -343,7 +343,7 @@ buffer_stream_get_rbuf(struct vsf_stream_t *stream, uint8_t **ptr)
 	if (bufstream->mem.read)
 	{
 		p = bufstream->mem.buffer.buffer + bufstream->mem.pos;
-		size = buffer_stream_get_data_length(stream);
+		size = vsf_bufstream_get_data_length(stream);
 	}
 
 	if (ptr)
@@ -352,7 +352,7 @@ buffer_stream_get_rbuf(struct vsf_stream_t *stream, uint8_t **ptr)
 }
 
 static uint32_t
-buffer_stream_write(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer)
+vsf_bufstream_write(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer)
 {
 	struct vsf_bufstream_t *bufstream = (struct vsf_bufstream_t *)stream;
 	uint32_t wsize = 0;
@@ -365,7 +365,7 @@ buffer_stream_write(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer)
 	}
 	else
 	{
-		uint32_t avail_len = buffer_stream_get_avail_length(stream);
+		uint32_t avail_len = vsf_bufstream_get_avail_length(stream);
 		wsize = min(avail_len, buffer->size);
 		if (buffer->buffer && wsize)
 		{
@@ -378,14 +378,14 @@ buffer_stream_write(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer)
 }
 
 static uint32_t
-buffer_stream_read(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer)
+vsf_bufstream_read(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer)
 {
 	struct vsf_bufstream_t *bufstream = (struct vsf_bufstream_t *)stream;
 	uint32_t rsize = 0;
 
 	if (bufstream->mem.read)
 	{
-		uint32_t data_len = buffer_stream_get_data_length(stream);
+		uint32_t data_len = vsf_bufstream_get_data_length(stream);
 		rsize = min(data_len, buffer->size);
 		if (buffer->buffer && rsize)
 		{
@@ -404,39 +404,39 @@ buffer_stream_read(struct vsf_stream_t *stream, struct vsf_buffer_t *buffer)
 	return rsize;
 }
 
-const struct vsf_stream_op_t fifostream_op =
+const struct vsf_stream_op_t vsf_fifostream_op =
 {
-	.init = fifo_stream_init,
-	.fini = fifo_stream_init,
-	.write = fifo_stream_write,
-	.read = fifo_stream_read,
-	.get_data_length = fifo_stream_get_data_length,
-	.get_avail_length = fifo_stream_get_avail_length,
-	.get_wbuf = fifo_stream_get_wbuf,
-	.get_rbuf = fifo_stream_get_rbuf,
+	.init = vsf_fifostream_init,
+	.fini = vsf_fifostream_init,
+	.write = vsf_fifostream_write,
+	.read = vsf_fifostream_read,
+	.get_data_length = vsf_fifostream_get_data_length,
+	.get_avail_length = vsf_fifostream_get_avail_length,
+	.get_wbuf = vsf_fifostream_get_wbuf,
+	.get_rbuf = vsf_fifostream_get_rbuf,
 };
 
-const struct vsf_stream_op_t mbufstream_op =
+const struct vsf_stream_op_t vsf_mbufstream_op =
 {
-	.init = multibuf_stream_init,
-	.fini = multibuf_stream_init,
-	.write = multibuf_stream_write,
-	.read = multibuf_stream_read,
-	.get_data_length = multibuf_stream_get_data_length,
-	.get_avail_length = multibuf_stream_get_avail_length,
-	.get_wbuf = multibuf_stream_get_wbuf,
-	.get_rbuf = multibuf_stream_get_rbuf,
+	.init = vsf_mbufstream_init,
+	.fini = vsf_mbufstream_init,
+	.write = vsf_mbufstream_write,
+	.read = vsf_mbufstream_read,
+	.get_data_length = vsf_mbufstream_get_data_length,
+	.get_avail_length = vsf_mbufstream_get_avail_length,
+	.get_wbuf = vsf_mbufstream_get_wbuf,
+	.get_rbuf = vsf_mbufstream_get_rbuf,
 };
 
-const struct vsf_stream_op_t bufstream_op =
+const struct vsf_stream_op_t vsf_bufstream_op =
 {
-	.init = buffer_stream_init,
-	.fini = buffer_stream_init,
-	.write = buffer_stream_write,
-	.read = buffer_stream_read,
-	.get_data_length = buffer_stream_get_data_length,
-	.get_avail_length = buffer_stream_get_avail_length,
-	.get_wbuf = buffer_stream_get_wbuf,
-	.get_rbuf = buffer_stream_get_rbuf,
+	.init = vsf_bufstream_init,
+	.fini = vsf_bufstream_init,
+	.write = vsf_bufstream_write,
+	.read = vsf_bufstream_read,
+	.get_data_length = vsf_bufstream_get_data_length,
+	.get_avail_length = vsf_bufstream_get_avail_length,
+	.get_wbuf = vsf_bufstream_get_wbuf,
+	.get_rbuf = vsf_bufstream_get_rbuf,
 };
 

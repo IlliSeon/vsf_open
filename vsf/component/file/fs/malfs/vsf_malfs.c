@@ -36,7 +36,7 @@ vsf_err_t vsf_malfs_init(struct vsf_malfs_t *malfs)
 	malfs->malstream.mbufstream = &malfs->mbufstream;
 	malfs->malstream.cb.param = malfs;
 	malfs->malstream.cb.on_finish = vsf_malfs_finish;
-	malfs->mbufstream.stream.op = &mbufstream_op;
+	malfs->mbufstream.stream.op = &vsf_mbufstream_op;
 	malfs->mbufstream.mem.multibuf.size = malfs->malstream.mal->cap.block_size;
 	malfs->mbufstream.mem.multibuf.buffer_list = malfs->mbufstream_buffer;
 
@@ -78,7 +78,7 @@ vsf_err_t vsf_malfs_read(struct vsf_malfs_t *malfs, uint32_t sector,
 	for (uint32_t i = 0; i < num; i++, buff += bs)
 		malfs->mbufstream_buffer[i] = buff;
 	malfs->mbufstream.mem.multibuf.count = num;
-	STREAM_INIT(&malfs->mbufstream);
+	VSFSTREAM_INIT(&malfs->mbufstream);
 	return vsf_malstream_read(&malfs->malstream, sector * bs, num * bs);
 }
 
@@ -100,7 +100,7 @@ vsf_err_t vsf_malfs_write(struct vsf_malfs_t *malfs, uint32_t sector,
 	for (uint32_t i = 0; i < num; i++, buff += bs)
 		malfs->mbufstream_buffer[i] = buff;
 	malfs->mbufstream.mem.multibuf.count = num;
-	STREAM_INIT(&malfs->mbufstream);
+	VSFSTREAM_INIT(&malfs->mbufstream);
 	return vsf_malstream_write(&malfs->malstream, sector * bs, num * bs);
 }
 

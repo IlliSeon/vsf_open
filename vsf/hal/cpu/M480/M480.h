@@ -26341,6 +26341,9 @@ typedef struct {
 #define SDH_INTEN_CDIEN_Pos              (8)                                               /*!< SDH_T::INTEN: CDIEN Position          */
 #define SDH_INTEN_CDIEN_Msk              (0x1ul << SDH_INTEN_CDIEN_Pos)                    /*!< SDH_T::INTEN: CDIEN Mask              */
 
+#define SDH_INTEN_SDHIEN0_Pos            (10)                                              /*!< SDH_T::INTEN: SDHIEN0 Position            */
+#define SDH_INTEN_SDHIEN0_Msk            (0x1ul << SDH_INTEN_SDHIEN0_Pos)                  /*!< SDH_T::INTEN: SDHIEN0 Mask                */
+
 #define SDH_INTEN_RTOIEN_Pos             (12)                                              /*!< SDH_T::INTEN: RTOIEN Position          */
 #define SDH_INTEN_RTOIEN_Msk             (0x1ul << SDH_INTEN_RTOIEN_Pos)                   /*!< SDH_T::INTEN: RTOIEN Mask              */
 
@@ -26373,6 +26376,9 @@ typedef struct {
 
 #define SDH_INTSTS_CDIF_Pos              (8)                                               /*!< SDH_T::INTSTS: CDIF Position          */
 #define SDH_INTSTS_CDIF_Msk              (0x1ul << SDH_INTSTS_CDIF_Pos)                    /*!< SDH_T::INTSTS: CDIF Mask              */
+
+#define SDH_INTSTS_SDHIF0_Pos            (10)                                              /*!< SDH_T::INTSTS: SDHIF0 Position            */
+#define SDH_INTSTS_SDHIF0_Msk            (0x1ul << SDH_INTSTS_SDHIF0_Pos)                  /*!< SDH_T::INTSTS: SDHIF0 Mask                */
 
 #define SDH_INTSTS_RTOIF_Pos             (12)                                              /*!< SDH_T::INTSTS: RTOIF Position          */
 #define SDH_INTSTS_RTOIF_Msk             (0x1ul << SDH_INTSTS_RTOIF_Pos)                   /*!< SDH_T::INTSTS: RTOIF Mask              */
