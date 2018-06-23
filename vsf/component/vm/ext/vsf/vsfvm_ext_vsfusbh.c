@@ -51,7 +51,7 @@ static enum vsfvm_ret_t vsfvm_ext_usbhdev_find(struct vsfvm_thread_t *thread)
 	struct vsfvm_var_t *vid = vsfvm_get_func_argu_ref(thread, 0);
 	struct vsfvm_var_t *pid = vsfvm_get_func_argu_ref(thread, 1);
 	uint32_t devnum = vsfusbh_libusb_enum_begin();
-	struct vsfusbh_libusb_dev_t *dev;
+	struct vsfusbh_libusb_dev_t *dev = NULL;
 
 	while (devnum-- > 0)
 	{
