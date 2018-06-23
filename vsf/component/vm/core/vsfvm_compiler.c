@@ -479,7 +479,7 @@ static vsf_err_t vsfvmc_parse_stmt(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 					vsfvmc_push_bytecode(vsfvmc, VSFVM_KEYWORD(VSFVM_CODE_KEYWORD_goto, data->uval, 0));
 					while (data->uval--)
 					{
-						list = func->varlist.next;
+						list = &func->varlist;
 						next = list->next;
 						while (next->next != NULL)
 						{
