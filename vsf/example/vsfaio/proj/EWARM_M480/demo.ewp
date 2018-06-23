@@ -321,7 +321,9 @@
           <state>$PROJ_DIR$\..\..\..\..\..\vsf\compiler\IAR</state>
           <state>$PROJ_DIR$\..\..\..\..\..\vsf\hal</state>
           <state>$PROJ_DIR$\..\..\..\..\..\vsf\hal\cpu\M480</state>
-          <state>$PROJ_DIR$\..\..\..\..\..\vsf\example\vsfaio\usrapp\aio</state>
+          <state>$PROJ_DIR$\..\..\..\..\..\vsf\component\vm\core</state>
+          <state>$PROJ_DIR$\..\..\..\..\..\vsf\component\vm\ext</state>
+          <state>$PROJ_DIR$\..\..\..\..\..\vsf\example\vsfaio\usrapp\vm</state>
         </option>
         <option>
           <name>CCStdIncCheck</name>
@@ -1953,6 +1955,9 @@
     <name>usrapp</name>
     <group>
       <name>aio</name>
+      <excluded>
+        <configuration>Debug</configuration>
+      </excluded>
       <file>
         <name>$PROJ_DIR$\..\..\usrapp\aio\app_cfg.h</name>
       </file>
@@ -1965,12 +1970,18 @@
     </group>
     <group>
       <name>fakefat32</name>
+      <excluded>
+        <configuration>Debug</configuration>
+      </excluded>
       <file>
         <name>$PROJ_DIR$\..\..\usrapp\fakefat32\usrapp.c</name>
       </file>
     </group>
     <group>
       <name>stepbystep</name>
+      <excluded>
+        <configuration>Debug</configuration>
+      </excluded>
       <group>
         <name>step0_printf</name>
         <file>
@@ -1980,8 +1991,23 @@
     </group>
     <group>
       <name>usbcdc</name>
+      <excluded>
+        <configuration>Debug</configuration>
+      </excluded>
       <file>
         <name>$PROJ_DIR$\..\..\usrapp\usbcdc\usrapp.c</name>
+      </file>
+    </group>
+    <group>
+      <name>vm</name>
+      <file>
+        <name>$PROJ_DIR$\..\..\usrapp\vm\app_cfg.h</name>
+      </file>
+      <file>
+        <name>$PROJ_DIR$\..\..\usrapp\vm\usrapp.c</name>
+      </file>
+      <file>
+        <name>$PROJ_DIR$\..\..\usrapp\vm\usrapp.h</name>
       </file>
     </group>
   </group>
@@ -2036,25 +2062,25 @@
         <group>
           <name>bittool</name>
           <file>
-            <name>$PROJ_DIR$\..\..\..\..\component\fundation\bittool\bittool.c</name>
+            <name>$PROJ_DIR$\..\..\..\..\component\fundation\bittool\vsfbittool.c</name>
           </file>
         </group>
         <group>
           <name>buffer</name>
           <file>
-            <name>$PROJ_DIR$\..\..\..\..\component\fundation\buffer\buffer.c</name>
+            <name>$PROJ_DIR$\..\..\..\..\component\fundation\buffer\vsfbuffer.c</name>
           </file>
         </group>
         <group>
           <name>list</name>
           <file>
-            <name>$PROJ_DIR$\..\..\..\..\component\fundation\list\list.c</name>
+            <name>$PROJ_DIR$\..\..\..\..\component\fundation\list\vsflist.c</name>
           </file>
         </group>
         <group>
           <name>stream</name>
           <file>
-            <name>$PROJ_DIR$\..\..\..\..\component\fundation\stream\stream.c</name>
+            <name>$PROJ_DIR$\..\..\..\..\component\fundation\stream\vsfstream.c</name>
           </file>
         </group>
       </group>
@@ -2148,9 +2174,21 @@
       <group>
         <name>tool</name>
         <group>
+          <name>dynarr</name>
+          <file>
+            <name>$PROJ_DIR$\..\..\..\..\component\tool\dynarr\vsf_dynarr.c</name>
+          </file>
+        </group>
+        <group>
           <name>dynpool</name>
           <file>
             <name>$PROJ_DIR$\..\..\..\..\component\tool\dynpool\vsf_dynpool.c</name>
+          </file>
+        </group>
+        <group>
+          <name>dynstack</name>
+          <file>
+            <name>$PROJ_DIR$\..\..\..\..\component\tool\dynstack\vsf_dynstack.c</name>
           </file>
         </group>
       </group>
@@ -2200,6 +2238,12 @@
               </file>
             </group>
             <group>
+              <name>libusb</name>
+              <file>
+                <name>$PROJ_DIR$\..\..\..\..\component\usb\class\host\libusb\vsfusbh_libusb.c</name>
+              </file>
+            </group>
+            <group>
               <name>MSC</name>
               <file>
                 <name>$PROJ_DIR$\..\..\..\..\component\usb\class\host\MSC\vsfusbh_MSC.c</name>
@@ -2230,6 +2274,57 @@
           <file>
             <name>$PROJ_DIR$\..\..\..\..\component\usb\core\vsfusbh.c</name>
           </file>
+        </group>
+      </group>
+      <group>
+        <name>vm</name>
+        <group>
+          <name>core</name>
+          <group>
+            <name>lexer</name>
+            <group>
+              <name>dart</name>
+              <file>
+                <name>$PROJ_DIR$\..\..\..\..\component\vm\core\lexer\dart\vsfvm_lexer_dart.c</name>
+              </file>
+            </group>
+            <file>
+              <name>$PROJ_DIR$\..\..\..\..\component\vm\core\lexer\vsfvm_lexer.c</name>
+            </file>
+          </group>
+          <file>
+            <name>$PROJ_DIR$\..\..\..\..\component\vm\core\vsfvm.c</name>
+          </file>
+          <file>
+            <name>$PROJ_DIR$\..\..\..\..\component\vm\core\vsfvm_common.c</name>
+          </file>
+          <file>
+            <name>$PROJ_DIR$\..\..\..\..\component\vm\core\vsfvm_compiler.c</name>
+          </file>
+          <file>
+            <name>$PROJ_DIR$\..\..\..\..\component\vm\core\vsfvm_objdump.c</name>
+          </file>
+          <file>
+            <name>$PROJ_DIR$\..\..\..\..\component\vm\core\vsfvm_snapshot.c</name>
+          </file>
+        </group>
+        <group>
+          <name>ext</name>
+          <group>
+            <name>std</name>
+            <file>
+              <name>$PROJ_DIR$\..\..\..\..\component\vm\ext\std\vsfvm_ext_std.c</name>
+            </file>
+          </group>
+          <group>
+            <name>vsf</name>
+            <file>
+              <name>$PROJ_DIR$\..\..\..\..\component\vm\ext\vsf\vsfvm_ext_vsf.c</name>
+            </file>
+            <file>
+              <name>$PROJ_DIR$\..\..\..\..\component\vm\ext\vsf\vsfvm_ext_vsfusbh.c</name>
+            </file>
+          </group>
         </group>
       </group>
     </group>

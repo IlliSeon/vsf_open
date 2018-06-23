@@ -76,5 +76,6 @@
 #include "component/usb/class/host/HID/vsfusbh_HID.h"
 #include "component/usb/class/host/MSC/vsfusbh_MSC.h"
 #include "component/usb/class/host/net/vsfusbh_CDCECM.h"
+#include "component/usb/class/host/libusb/vsfusbh_libusb.h"
 
 #endif		// __VSF_H_INCLUDED__
