@@ -65,8 +65,7 @@ vsf_err_t vsfhal_gpio_config(uint8_t index, uint8_t pin_idx, uint32_t mode)
 
 vsf_err_t vsfhal_gpio_set(uint8_t index, uint32_t pin_mask)
 {
-	uint32_t *gpio;
-	uint32_t i;
+	GPIO_T *gpio;
 	
 #if __VSF_DEBUG__
 	if (index >= M480_GPIO_NUM)
@@ -75,21 +74,15 @@ vsf_err_t vsfhal_gpio_set(uint8_t index, uint32_t pin_mask)
 	}
 #endif
 	
-	gpio = (uint32_t *)(GPIO_PIN_DATA_BASE + ((uint32_t)index << 6));
-	for (i = 0; i < 16; i++)
-	{
-		if (pin_mask & (1UL << i))
-		{
-			gpio[i] = 1;
-		}
-	}
+	gpio = (GPIO_T *)(GPIOA_BASE + ((uint32_t)index << 6));
+	gpio->DATMSK = ~pin_mask;
+	gpio->DOUT = 0xFFFF;
 	return VSFERR_NONE;
 }
 
 vsf_err_t vsfhal_gpio_clear(uint8_t index, uint32_t pin_mask)
 {
-	uint32_t *gpio;
-	uint32_t i;
+	GPIO_T *gpio;
 	
 #if __VSF_DEBUG__
 	if (index >= M480_GPIO_NUM)
@@ -98,21 +91,15 @@ vsf_err_t vsfhal_gpio_clear(uint8_t index, uint32_t pin_mask)
 	}
 #endif
 	
-	gpio = (uint32_t *)(GPIO_PIN_DATA_BASE + ((uint32_t)index << 6));
-	for (i = 0; i < 16; i++)
-	{
-		if (pin_mask & (1UL << i))
-		{
-			gpio[i] = 0;
-		}
-	}
+	gpio = (GPIO_T *)(GPIOA_BASE + ((uint32_t)index << 6));
+	gpio->DATMSK = ~pin_mask;
+	gpio->DOUT = 0;
 	return VSFERR_NONE;
 }
 
 vsf_err_t vsfhal_gpio_out(uint8_t index, uint32_t pin_mask, uint32_t value)
 {
-	uint32_t *gpio;
-	uint32_t i;
+	GPIO_T *gpio;
 	
 #if __VSF_DEBUG__
 	if (index >= M480_GPIO_NUM)
@@ -121,14 +108,9 @@ vsf_err_t vsfhal_gpio_out(uint8_t index, uint32_t pin_mask, uint32_t value)
 	}
 #endif
 	
-	gpio = (uint32_t *)(GPIO_PIN_DATA_BASE + ((uint32_t)index << 6));
-	for (i = 0; i < 16; i++)
-	{
-		if (pin_mask & (1UL << i))
-		{
-			gpio[i] = (value & (1UL << i)) >> i;
-		}
-	}
+	gpio = (GPIO_T *)(GPIOA_BASE + ((uint32_t)index << 6));
+	gpio->DATMSK = ~pin_mask;
+	gpio->DOUT = value;
 	return VSFERR_NONE;
 }
 
