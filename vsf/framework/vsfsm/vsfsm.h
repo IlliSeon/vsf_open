@@ -50,6 +50,19 @@
 #ifndef VSFSM_CFG_LJMP_EN
 #define VSFSM_CFG_LJMP_EN				0
 #endif
+#ifndef VSFSM_CFG_THREAD_EN
+#define VSFSM_CFG_THREAD_EN				0
+#endif
+
+#if VSFSM_CFG_THREAD_EN && !VSFSM_CFG_PREMPT_EN
+#warning "need VSFSM_CFG_PREMPT_EN, set to 1"
+#undef VSFSM_CFG_PREMPT_EN
+#define VSFSM_CFG_PREMPT_EN				1
+#endif
+
+#if VSFSM_CFG_LJMP_EN || VSFSM_CFG_THREAD_EN
+#include <setjmp.h>
+#endif
 
 enum
 {
@@ -139,6 +152,9 @@ struct vsfsm_evtq_element_t
 	struct vsfsm_t *sm;
 	vsfsm_evt_t evt;
 };
+#if VSFSM_CFG_THREAD_EN
+struct vsfsm_thread_t;
+#endif
 struct vsfsm_evtq_t
 {
 	uint32_t size;
@@ -149,6 +165,10 @@ struct vsfsm_evtq_t
 	volatile struct vsfsm_evtq_element_t *tail;
 	volatile uint16_t evt_count;
 	volatile uint16_t tick_evt_count;
+#if VSFSM_CFG_THREAD_EN
+	struct vsfsm_thread_t *cur_thread;
+	struct vsf_dynstack_t thread_stack;
+#endif
 };
 void vsfsm_evtq_init(struct vsfsm_evtq_t *queue);
 struct vsfsm_evtq_t* vsfsm_evtq_set(struct vsfsm_evtq_t *queue);
@@ -177,7 +197,6 @@ vsf_err_t vsfsm_msm_init(struct vsfsm_t *sm, struct vsfsm_msm_t *msm);
 #endif
 
 #if VSFSM_CFG_LJMP_EN
-#include <setjmp.h>
 struct vsfsm_ljmp_t;
 typedef void (*vsfsm_ljmp_thread_t)(struct vsfsm_ljmp_t *ljmp);
 struct vsfsm_ljmp_t
@@ -256,6 +275,35 @@ void vsfsm_pt_entry(struct vsfsm_pt_t *pt);
 		}\
 	} while (0)
 #endif // VSFSM_CFG_PT_EN
+
+#if VSFSM_CFG_THREAD_EN
+struct vsfsm_thread_op_t
+{
+	void (*on_run)(struct vsfsm_thread_t *thread);
+	void (*on_terminate)(struct vsfsm_thread_t *thread);
+};
+struct vsfsm_thread_t
+{
+	// public
+	void *priv;
+	const struct vsfsm_thread_op_t *op;
+	uint32_t stack_size;
+	uint8_t *stack;
+
+	// private
+	struct vsfsm_t sm;
+	jmp_buf pos;
+	jmp_buf *ret;
+
+	unsigned terminated : 1;
+};
+vsf_err_t vsfsm_thread_start(struct vsfsm_thread_t *thread);
+struct vsfsm_thread_t *vsfsm_thread_get_cur(void);
+void vsfsm_thread_ret(void);
+vsfsm_evt_t vsfsm_thread_wait(void);
+void vsfsm_thread_wfe(vsfsm_evt_t evt);
+void vsfsm_thread_sendevt(struct vsfsm_thread_t *thread, vsfsm_evt_t evt);
+#endif // VSFSM_CFG_THREAD_EN
 
 // vsfsm_get_event_pending should be called with interrupt disabled
 uint32_t vsfsm_get_event_pending(void);

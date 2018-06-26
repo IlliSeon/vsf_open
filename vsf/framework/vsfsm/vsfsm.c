@@ -48,6 +48,10 @@ void vsfsm_evtq_init(struct vsfsm_evtq_t *queue)
 {
 	queue->head = queue->tail = queue->queue;
 	queue->evt_count = 0;
+#if VSFSM_CFG_THREAD_EN
+	queue->cur_thread = NULL;
+	vsf_dynstack_init(&queue->thread_stack, sizeof(struct vsfsm_thread_t *), 2, 2);
+#endif
 }
 
 // vsfsm_get_event_pending should be called with interrupt disabled
@@ -559,6 +563,81 @@ vsf_err_t vsfsm_pt_init(struct vsfsm_t *sm, struct vsfsm_pt_t *pt)
 	sm->init_state.evt_handler = vsfsm_pt_evt_handler;
 	pt->sm = sm;
 	return vsfsm_init(sm);
+}
+#endif
+
+#if VSFSM_CFG_THREAD_EN
+struct vsfsm_thread_t *vsfsm_thread_get_cur(void)
+{
+	return vsfsm_cur_evtq->cur_thread;
+}
+
+void vsfsm_thread_ret(void)
+{
+	struct vsfsm_thread_t *thread = vsfsm_thread_get_cur();
+	longjmp(*(thread)->ret, 0);
+}
+
+vsfsm_evt_t vsfsm_thread_wait(void)
+{
+	struct vsfsm_thread_t *thread = vsfsm_thread_get_cur();
+	vsfsm_evt_t curevt = setjmp(thread->pos);
+	if (!curevt) vsfsm_thread_ret();
+	return curevt;
+}
+
+void vsfsm_thread_wfe(vsfsm_evt_t evt)
+{
+	struct vsfsm_thread_t *thread = vsfsm_thread_get_cur();
+	vsfsm_evt_t curevt = setjmp(thread->pos);
+	if (!curevt || (curevt != evt))
+		vsfsm_thread_ret();
+}
+
+void vsfsm_thread_sendevt(struct vsfsm_thread_t *thread, vsfsm_evt_t evt)
+{
+	vsfsm_post_evt(&thread->sm, evt);
+}
+
+static struct vsfsm_state_t *
+vsfsm_thread_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
+{
+	struct vsfsm_thread_t *thread = (struct vsfsm_thread_t *)sm->user_data;
+	jmp_buf ret;
+
+	if ((evt == VSFSM_EVT_ENTER) || (evt == VSFSM_EVT_EXIT))
+		return NULL;
+
+	thread->ret = &ret;
+	vsf_dynstack_push(&vsfsm_cur_evtq->thread_stack, &vsfsm_cur_evtq->cur_thread, 1);
+	vsfsm_cur_evtq->cur_thread = thread;
+	if (!setjmp(ret))
+	{
+		if (evt == VSFSM_EVT_INIT)
+		{
+			vsfhal_core_set_stack((uint32_t)(&thread->stack[thread->stack_size]));
+			thread->op->on_run(thread);
+			thread->terminated = true;
+			vsfsm_thread_ret();
+		}
+		else
+		{
+			longjmp(thread->pos, evt);
+		}
+	}
+	if ((thread->terminated) && (thread->op->on_terminate != NULL))
+		thread->op->on_terminate(thread);
+	vsfsm_cur_evtq->cur_thread =
+		*(struct vsfsm_thread_t **)vsf_dynstack_pop(&vsfsm_cur_evtq->thread_stack, 1);
+	return NULL;
+}
+
+vsf_err_t vsfsm_thread_start(struct vsfsm_thread_t *thread)
+{
+	thread->terminated = false;
+	thread->sm.user_data = thread;
+	thread->sm.init_state.evt_handler = vsfsm_thread_evt_handler;
+	return vsfsm_init(&thread->sm);
 }
 #endif
 

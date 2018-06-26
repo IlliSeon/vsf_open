@@ -27,10 +27,7 @@
 #include "vsf_cfg.h"
 #include "vsfhal.h"
 
-// framework
-#include "framework/vsfsm/vsfsm.h"
-#include "framework/vsftimer/vsftimer.h"
-
+// fundation and tools
 #include "component/fundation/buffer/vsfbuffer.h"
 #include "component/fundation/stream/vsfstream.h"
 #include "component/stream/usart_stream/usart_stream.h"
@@ -39,6 +36,11 @@
 #include "component/tool/dynarr/vsf_dynarr.h"
 #include "component/tool/dynstack/vsf_dynstack.h"
 
+// framework
+#include "framework/vsfsm/vsfsm.h"
+#include "framework/vsftimer/vsftimer.h"
+
+// components
 #include "component/mal/vsfmal.h"
 #include "component/mal/vsfscsi.h"
 #include "component/mal/drivers/embflash/embflash.h"
