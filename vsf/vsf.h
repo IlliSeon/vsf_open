@@ -30,7 +30,7 @@
 // fundation and tools
 #include "component/fundation/buffer/vsfbuffer.h"
 #include "component/fundation/stream/vsfstream.h"
-#include "component/stream/usart_stream/usart_stream.h"
+#include "component/stream/usart_stream/vsf_usart_stream.h"
 
 #include "component/tool/dynpool/vsf_dynpool.h"
 #include "component/tool/dynarr/vsf_dynarr.h"

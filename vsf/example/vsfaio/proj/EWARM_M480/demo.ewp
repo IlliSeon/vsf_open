@@ -2000,6 +2000,9 @@
     </group>
     <group>
       <name>usblyzer</name>
+      <excluded>
+        <configuration>Debug</configuration>
+      </excluded>
       <file>
         <name>$PROJ_DIR$\..\..\usrapp\usblyzer\usrapp.c</name>
       </file>
@@ -2257,9 +2260,12 @@
             </group>
             <group>
               <name>net</name>
-              <file>
-                <name>$PROJ_DIR$\..\..\..\..\component\usb\class\host\net\vsfusbh_CDCECM.c</name>
-              </file>
+              <group>
+                <name>ecm</name>
+                <file>
+                  <name>$PROJ_DIR$\..\..\..\..\component\usb\class\host\net\ecm\vsfusbh_CDCECM.c</name>
+                </file>
+              </group>
             </group>
             <group>
               <name>usblyzer</name>

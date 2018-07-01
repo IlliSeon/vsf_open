@@ -37,7 +37,7 @@ struct usrapp_t usrapp =
 	.debug.uart_stream.index				= DEBUG_UART_INDEX,
 	.debug.uart_stream.mode					= VSFHAL_USART_STOPBITS_1 | VSFHAL_USART_PARITY_NONE,
 	.debug.uart_stream.int_priority			= 0xFF,
-	.debug.uart_stream.baudrate				= 115200,
+	.debug.uart_stream.baudrate				= 3 * 1000 * 1000,
 	.debug.uart_stream.stream_tx			= &usrapp.debug.stream_tx.stream,
 	.debug.uart_stream.stream_rx			= &usrapp.debug.stream_rx.stream,
 };
