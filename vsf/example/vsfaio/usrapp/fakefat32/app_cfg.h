@@ -15,7 +15,7 @@
  **************************************************************************/
 
 // hardware config file
-#include "hw_cfg_M480.h"
+#include "hw_cfg.h"
 
 // compiler config
 #include "compiler.h"

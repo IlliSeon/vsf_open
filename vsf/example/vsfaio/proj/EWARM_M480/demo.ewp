@@ -1942,7 +1942,7 @@
   <group>
     <name>config</name>
     <file>
-      <name>$PROJ_DIR$\hw_cfg_M480.h</name>
+      <name>$PROJ_DIR$\hw_cfg.h</name>
     </file>
     <file>
       <name>$PROJ_DIR$\..\..\config\vsf_cfg.h</name>
@@ -1996,6 +1996,12 @@
       </excluded>
       <file>
         <name>$PROJ_DIR$\..\..\usrapp\usbcdc\usrapp.c</name>
+      </file>
+    </group>
+    <group>
+      <name>usblyzer</name>
+      <file>
+        <name>$PROJ_DIR$\..\..\usrapp\usblyzer\usrapp.c</name>
       </file>
     </group>
     <group>
@@ -2113,7 +2119,7 @@
         <group>
           <name>usart_stream</name>
           <file>
-            <name>$PROJ_DIR$\..\..\..\..\component\stream\usart_stream\usart_stream.c</name>
+            <name>$PROJ_DIR$\..\..\..\..\component\stream\usart_stream\vsf_usart_stream.c</name>
           </file>
         </group>
       </group>
@@ -2253,6 +2259,12 @@
               <name>net</name>
               <file>
                 <name>$PROJ_DIR$\..\..\..\..\component\usb\class\host\net\vsfusbh_CDCECM.c</name>
+              </file>
+            </group>
+            <group>
+              <name>usblyzer</name>
+              <file>
+                <name>$PROJ_DIR$\..\..\..\..\component\usb\class\host\usblyzer\vsfusbh_USBLyzer.c</name>
               </file>
             </group>
           </group>

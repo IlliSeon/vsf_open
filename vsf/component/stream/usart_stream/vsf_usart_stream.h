@@ -17,10 +17,10 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef __USART_STREAM_H_INCLUDED__
-#define __USART_STREAM_H_INCLUDED__
+#ifndef __VSF_USART_STREAM_H_INCLUDED__
+#define __VSF_USART_STREAM_H_INCLUDED__
 
-struct usart_stream_t
+struct vsf_usart_stream_t
 {
 	vsfhal_usart_t index;
 	uint8_t mode;
@@ -35,11 +35,8 @@ struct usart_stream_t
 	bool rx_pend;
 };
 
-// backward compatibility
-#define usart_stream_info_t			usart_stream_t
+vsf_err_t vsf_usart_stream_init(struct vsf_usart_stream_t *usart_stream);
+vsf_err_t vsf_usart_stream_fini(struct vsf_usart_stream_t *usart_stream);
+vsf_err_t vsf_usart_stream_config(struct vsf_usart_stream_t *usart_stream);
 
-vsf_err_t usart_stream_init(struct usart_stream_t *usart_stream);
-vsf_err_t usart_stream_fini(struct usart_stream_t *usart_stream);
-vsf_err_t usart_stream_config(struct usart_stream_t *usart_stream);
-
-#endif	// __USART_STREAM_H_INCLUDED__
+#endif	// __VSF_USART_STREAM_H_INCLUDED__

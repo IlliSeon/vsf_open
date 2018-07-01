@@ -15,13 +15,13 @@
  **************************************************************************/
 
 // hardware config file
-#include "hw_cfg_M480.h"
+#include "hw_cfg.h"
 
 // compiler config
 #include "compiler.h"
 
 #define APPCFG_VSFTIMER_NUM				8
-#define APPCFG_BUFMGR_SIZE				(16 * 1024)
+#define APPCFG_BUFMGR_SIZE				compiler_get_heap_size()
 
 // The 3 MACROs below define the Hard/Soft/Non-RealTime event queue
 // undefine to indicate that the corresponding event queue is not supported

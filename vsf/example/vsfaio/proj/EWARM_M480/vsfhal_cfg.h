@@ -53,4 +53,6 @@
 #	define CORE_VECTOR_TABLE				FLASH_LOAD_OFFSET
 #endif
 
+#define VSFHAL_CFG_USBD_ONNAK_EN
+
 #endif // __VSFHAL_CFG_H__

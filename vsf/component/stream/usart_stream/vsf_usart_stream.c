@@ -23,7 +23,7 @@
 
 static void uart_on_tx(void *p)
 {
-	struct usart_stream_t *stream = (struct usart_stream_t *)p;
+	struct vsf_usart_stream_t *stream = (struct vsf_usart_stream_t *)p;
 	uint8_t buf[USART_BUF_SIZE];
 	struct vsf_buffer_t buffer;
 	uint16_t hw_bufsize;
@@ -50,7 +50,7 @@ static void uart_on_tx(void *p)
 
 static void uart_on_rx(void *p)
 {
-	struct usart_stream_t *stream = (struct usart_stream_t *)p;
+	struct vsf_usart_stream_t *stream = (struct vsf_usart_stream_t *)p;
 	uint8_t buf[USART_BUF_SIZE];
 	struct vsf_buffer_t buffer;
 	uint16_t hw_bufsize;
@@ -86,7 +86,7 @@ static void uart_on_rx(void *p)
 
 static void uart_on_stream_in(void *p)
 {
-	struct usart_stream_t *stream = (struct usart_stream_t *)p;
+	struct vsf_usart_stream_t *stream = (struct vsf_usart_stream_t *)p;
 	if (!stream->txing)
 	{
 		stream->txing = true;
@@ -96,7 +96,7 @@ static void uart_on_stream_in(void *p)
 
 static void uart_on_stream_out(void *p)
 {
-	struct usart_stream_t *stream = (struct usart_stream_t *)p;
+	struct vsf_usart_stream_t *stream = (struct vsf_usart_stream_t *)p;
 	if (stream->rx_pend)
 	{
 		stream->rx_pend = false;
@@ -104,13 +104,13 @@ static void uart_on_stream_out(void *p)
 	}
 }
 
-vsf_err_t usart_stream_config(struct usart_stream_t *usart_stream)
+vsf_err_t vsf_usart_stream_config(struct vsf_usart_stream_t *usart_stream)
 {
 	return vsfhal_usart_config(usart_stream->index, usart_stream->baudrate,
 			usart_stream->mode);
 }
 
-vsf_err_t usart_stream_init(struct usart_stream_t *usart_stream)
+vsf_err_t vsf_usart_stream_init(struct vsf_usart_stream_t *usart_stream)
 {
 	if (!usart_stream->stream_tx && !usart_stream->stream_rx)
 		return VSFERR_FAIL;
@@ -139,10 +139,10 @@ vsf_err_t usart_stream_init(struct usart_stream_t *usart_stream)
 	vsfhal_usart_init(usart_stream->index);
 	vsfhal_usart_config_cb(usart_stream->index, usart_stream->int_priority,
 			usart_stream, uart_on_tx, uart_on_rx);
-	return usart_stream_config(usart_stream);
+	return vsf_usart_stream_config(usart_stream);
 }
 
-vsf_err_t usart_stream_fini(struct usart_stream_t *usart_stream)
+vsf_err_t vsf_usart_stream_fini(struct vsf_usart_stream_t *usart_stream)
 {
 	vsfhal_usart_config_cb(usart_stream->index, 0, NULL, NULL, NULL);
 	vsfhal_usart_fini(usart_stream->index);
