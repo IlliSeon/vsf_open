@@ -47,7 +47,7 @@ enum dhcp_opt_t
 };
 #define DHCPOPT_MSGTYPE_LEN			1
 #define DHCPOPT_MAXMSGSIZE_LEN		2
-#define DHCPOPT_MINLEN				68
+#define DHCPOPT_MINLEN				(0x40 - 4)	// 64bytes - 4byte magic
 
 #define DHCP_TOSERVER				1
 #define DHCP_TOCLIENT				2

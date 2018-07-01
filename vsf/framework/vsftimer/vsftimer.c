@@ -74,7 +74,7 @@ static struct vsfsm_state_t *
 vsftimer_init_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 {
 	uint32_t cur_tick = vsfhal_tickclk_get_ms();
-	struct vsftimer_notifier_t notifier;
+	struct vsfsm_notifier_t notifier;
 	struct vsftimer_t *timer;
 
 	switch (evt)
@@ -98,21 +98,7 @@ vsftimer_init_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 				{
 					vsftimer_free(timer);
 				}
-
-				if (notifier.evt != VSFSM_EVT_INVALID)
-				{
-					if (notifier.sm != NULL)
-					{
-						vsfsm_post_evt(notifier.sm, notifier.evt);
-					}
-				}
-				else
-				{
-					if (notifier.cb != NULL)
-					{
-						notifier.cb(notifier.param);
-					}
-				}
+				vsfsm_notifier_notify(&notifier);
 
 				timer = (struct vsftimer_t *)vsftimer.timerlist.head;
 			}
@@ -138,9 +124,7 @@ struct vsftimer_t *vsftimer_create_cb(uint32_t interval, int16_t trigger_cnt,
 		return NULL;
 	}
 
-	timer->notifier.evt = VSFSM_EVT_INVALID;
-	timer->notifier.cb = cb;
-	timer->notifier.param = param;
+	vsfsm_notifier_set_cb(&timer->notifier, cb, param);
 	timer->interval = interval;
 	timer->trigger_cnt = trigger_cnt;
 	vsftimer_enqueue(timer);
@@ -159,8 +143,7 @@ struct vsftimer_t *vsftimer_create(struct vsfsm_t *sm, uint32_t interval,
 		return NULL;
 	}
 
-	timer->notifier.sm = sm;
-	timer->notifier.evt = evt;
+	vsfsm_notifier_set_evt(&timer->notifier, sm, evt);
 	timer->interval = interval;
 	timer->trigger_cnt = trigger_cnt;
 	vsftimer_enqueue(timer);
@@ -185,8 +168,11 @@ void vsftimer_clean_sm(struct vsfsm_t *sm)
 	while (timer != NULL)
 	{
 		timer_next = container_of(timer->node.next, struct vsftimer_t, node);
-		if (sm && (timer->notifier.sm == sm))
+		if (sm && (timer->notifier.evt != VSFSM_EVT_INVALID) &&
+			(timer->notifier.sm == sm))
+		{
 			vsftimer_free(timer);
+		}
 		timer = timer_next;
 	}
 	vsfsm_sched_unlock(origlevel);

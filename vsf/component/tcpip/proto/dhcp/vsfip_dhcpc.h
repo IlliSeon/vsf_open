@@ -19,12 +19,6 @@
 #ifndef __VSFIP_DHCPC_H_INCLUDED__
 #define __VSFIP_DHCPC_H_INCLUDED__
 
-#define VSFIP_DHCPC_XID			0xABCD1234
-struct vsfip_dhcpc_local_t
-{
-	uint32_t xid;
-};
-
 struct vsfip_dhcpc_t
 {
 	struct vsfip_netif_t *netif;

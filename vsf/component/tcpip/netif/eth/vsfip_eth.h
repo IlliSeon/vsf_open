@@ -23,6 +23,8 @@
 #define VSFIP_ETH_HEADSIZE				14
 
 #ifndef VSFCFG_EXCLUDE_ETH
+bool vsfip_eth_available(struct vsfip_netif_t *netif,
+	const struct vsfip_ipaddr_t *dest_addr);
 vsf_err_t vsfip_eth_header(struct vsfip_buffer_t *buf,
 	enum vsfip_netif_proto_t proto, const struct vsfip_macaddr_t *dest_addr);
 void vsfip_eth_input(struct vsfip_buffer_t *buf);

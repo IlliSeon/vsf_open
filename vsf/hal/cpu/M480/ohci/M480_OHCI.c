@@ -31,7 +31,6 @@ struct vsfhal_ohci_irq_t
 
 ROOTFUNC void OHCI_IRQHandler(void)
 {
- 
 	if (vsfhal_ohci_irq.irq != NULL)
 	{
 		vsfhal_ohci_irq.irq(vsfhal_ohci_irq.param);

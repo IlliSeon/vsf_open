@@ -17,22 +17,30 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#define VSFCFG_MAX_SRT_PRIO			0xFF
+#ifndef __VSFUSBH_USBLYZER_H_INCLUDED__
+#define __VSFUSBH_USBLYZER_H_INCLUDED__
 
-#define VSFCFG_DEBUG
-#define VSFCFG_DEBUG_BUFLEN			256
+extern const struct vsfusbh_class_drv_t vsfusbh_usblyzer_drv;
 
-#define VSFCFG_THREAD_SAFTY
+void usblyzer_init(const struct vsfhal_usbd_t *drv, int32_t int_priority);
 
-// usbd
-//#define VSFUSBD_CFG_MPS					192
-#define VSFUSBD_CFG_HIGHSPEED
-//#define VSFUSBD_CFG_FULLSPEED
-//#define VSFUSBD_CFG_LOWSPEED
-#define VSFUSBD_CFG_EPMAXNO				8
+struct usblyzer_plugin_op_t
+{
+	void (*parse_config)(uint8_t *data, uint16_t len);
+	void (*on_SETUP)(struct usb_ctrlrequest_t *request, int16_t urb_status, uint8_t *data, uint16_t len);
+	void (*on_IN)(uint8_t ep, int16_t urb_status, uint8_t *data, uint16_t len);
+	void (*on_OUT)(uint8_t ep, int16_t urb_status, uint8_t *data, uint16_t len);
+};
 
-// vsfip
-#define VSFIP_CFG_MTU					1500
-#define VSFIP_CFG_TCP_RX_WINDOW			4500
-#define VSFIP_CFG_TCP_TX_WINDOW			3000
-#define VSFIP_CFG_NETIF_HEADLEN			64
+struct usblyzer_plugin_t
+{
+	const struct usblyzer_plugin_op_t *op;
+	struct usblyzer_plugin_t *next;
+};
+
+extern struct usblyzer_plugin_t usblyzer_plugin_stdreq;
+extern struct usblyzer_plugin_t usblyzer_plugin_hid;
+extern struct usblyzer_plugin_t usblyzer_plugin_msc;
+void usblyzer_register_plugin(struct usblyzer_plugin_t *plugin);
+
+#endif // __VSFUSBH_USBLYZER_H_INCLUDED__

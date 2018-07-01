@@ -156,7 +156,6 @@ vsf_err_t vsfhal_usart_config(vsfhal_usart_t index, uint32_t baudrate, uint32_t 
 
 	// mode:
 	// bit0 - bit1: parity
-	// ------------------------------------- bit2 - bit3: mode [nothing]
 	// bit4       : stopbits
 	reg_line |= (mode << 3) & 0x18;	//parity
 	reg_line |= (mode >> 2) & 0x04;	//stopbits

@@ -30,6 +30,12 @@ PACKED_HEAD struct PACKED_MID vsfip_ethhead_t
 #define VSFIP_ETH_TYPE_ARP			0x0806
 #define VSFIP_ETH_TYPE_RARP			0x0835
 
+bool vsfip_eth_available(struct vsfip_netif_t *netif,
+	const struct vsfip_ipaddr_t *dest_addr)
+{
+	return (dest_addr->size == 4) && (dest_addr->addr.s_addr_buf[0] != 127);
+}
+
 vsf_err_t vsfip_eth_header(struct vsfip_buffer_t *buf,
 	enum vsfip_netif_proto_t proto, const struct vsfip_macaddr_t *dest_addr)
 {

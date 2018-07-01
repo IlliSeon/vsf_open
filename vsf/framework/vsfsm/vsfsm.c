@@ -744,3 +744,34 @@ vsf_err_t vsfsm_sync_decrease(struct vsfsm_sync_t *sync, struct vsfsm_t *sm)
 	return VSFERR_NOT_READY;
 }
 #endif	// VSFSM_CFG_SYNC_EN
+
+// notifier
+void vsfsm_notifier_set_cb(struct vsfsm_notifier_t *notifier,
+			void (*cb)(void *param), void *param)
+{
+	notifier->evt = VSFSM_EVT_INVALID;
+	notifier->cb = cb;
+	notifier->param = param;
+}
+
+void vsfsm_notifier_set_evt(struct vsfsm_notifier_t *notifier,
+			struct vsfsm_t *sm, vsfsm_evt_t evt)
+{
+	notifier->evt = evt;
+	notifier->sm = sm;
+}
+
+void vsfsm_notifier_notify(struct vsfsm_notifier_t *notifier)
+{
+	if (notifier->evt != VSFSM_EVT_INVALID)
+	{
+		if (notifier->sm != NULL)
+		{
+			vsfsm_post_evt(notifier->sm, notifier->evt);
+		}
+	}
+	else if (notifier->cb != NULL)
+	{
+		notifier->cb(notifier->param);
+	}
+}

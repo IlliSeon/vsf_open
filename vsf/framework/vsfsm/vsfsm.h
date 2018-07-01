@@ -365,4 +365,27 @@ vsf_err_t vsfsm_sync_decrease(struct vsfsm_sync_t *sync, struct vsfsm_t *sm);
 
 #endif	// VSFSM_CFG_SYNC_EN
 
+// notifier
+struct vsfsm_notifier_t
+{
+	vsfsm_evt_t evt;
+	union
+	{
+		struct
+		{
+			struct vsfsm_t *sm;
+		};
+		struct
+		{
+			void (*cb)(void *param);
+			void *param;
+		};
+	};
+};
+void vsfsm_notifier_set_cb(struct vsfsm_notifier_t *notifier,
+			void (*cb)(void *param), void *param);
+void vsfsm_notifier_set_evt(struct vsfsm_notifier_t *notifier,
+			struct vsfsm_t *sm, vsfsm_evt_t evt);
+void vsfsm_notifier_notify(struct vsfsm_notifier_t *notifier);
+
 #endif	// #ifndef __VSFSM_H_INCLUDED__

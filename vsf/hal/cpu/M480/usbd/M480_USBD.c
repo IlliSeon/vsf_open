@@ -263,7 +263,11 @@ vsf_err_t vsfhal_usbd_ep_set_type(uint8_t idx, enum vsfhal_usbd_eptype_t type)
 		index_in -= 2;
 		vsfhal_usbd_set_eptype(index_in, eptype);
 		HSUSBD->GINTEN |= HSUSBD_GINTEN_EPAIEN_Msk << index_in;
-		M480_USBD_EP_REG(index_in, EP[0].EPINTEN) = HSUSBD_EPINTEN_TXPKIEN_Msk;
+		M480_USBD_EP_REG(index_in, EP[0].EPINTEN) = HSUSBD_EPINTEN_TXPKIEN_Msk
+#ifdef VSFHAL_CFG_USBD_ONNAK_EN
+			| HSUSBD_EPINTEN_NAKIEN_Msk
+#endif
+			;
 	}
 	if (index_out > 1)
 	{
@@ -855,6 +859,13 @@ void USB_Istr(void)
 					M480_USBD_EP_REG(i, EP[0].EPINTSTS) = HSUSBD_EPINTSTS_RXPKIF_Msk;
 					vsfhal_usbd_cb(VSFHAL_USBD_ON_OUT, ep);
 				}
+#ifdef VSFHAL_CFG_USBD_ONNAK_EN
+				if (IrqSt & HSUSBD_EPINTSTS_NAKIF_Msk)
+				{
+					M480_USBD_EP_REG(i, EP[0].EPINTSTS) = HSUSBD_EPINTSTS_NAKIF_Msk;
+					vsfhal_usbd_cb(VSFHAL_USBD_ON_NAK, ep);
+				}
+#endif
 			}
 		}
 	}

@@ -27,23 +27,7 @@ struct vsftimer_t
 {
 	// inherent from vsfq_node_t
 	struct vsfq_node_t node;
-	
-	struct vsftimer_notifier_t
-	{
-		union
-		{
-			struct
-			{
-				struct vsfsm_t *sm;
-			};
-			struct
-			{
-				void (*cb)(void *param);
-				void *param;
-			};
-		};
-		vsfsm_evt_t evt;
-	} notifier;
+	struct vsfsm_notifier_t notifier;
 	uint32_t interval;
 	int trigger_cnt;
 };

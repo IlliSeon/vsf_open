@@ -475,6 +475,7 @@ vsf_err_t vsfusbh_submit_urb(struct vsfusbh_t *usbh, struct vsfhcd_urb_t *urb)
 		urb->packet_size = dev->ep_mps_in[usb_pipeendpoint(urb->pipe)];
 	else
 		urb->packet_size = dev->ep_mps_out[usb_pipeendpoint(urb->pipe)];
+	if (!urb->packet_size) return VSFERR_FAIL;
 	
 #ifndef VSFCFG_FUNC_USBH_TINY
 	if (dev == usbh->rh_dev)

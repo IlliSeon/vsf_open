@@ -320,6 +320,7 @@ struct vsfip_t
 	uint32_t tsn;
 
 	bool quit;
+	uint8_t localaddr;
 	struct vsfip_mem_op_t *mem_op;
 	struct vsfip_netif_t* (*ip_route)(struct vsfip_ipaddr_t *addr);
 };
@@ -348,6 +349,8 @@ vsf_err_t vsfip_netif_remove(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 
 vsf_err_t vsfip_init(struct vsfip_mem_op_t *mem_op);
 vsf_err_t vsfip_fini(void);
+
+uint8_t vsfip_get_localaddr(void);
 
 // different from stant socket call,
 // vsfip_socket will return a pointer to vsfip_socket_t structure

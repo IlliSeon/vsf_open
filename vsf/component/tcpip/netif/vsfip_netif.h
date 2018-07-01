@@ -51,6 +51,8 @@ struct vsfip_netdrv_op_t
 	vsf_err_t (*header)(struct vsfip_buffer_t *buf,
 						enum vsfip_netif_proto_t proto,
 						const struct vsfip_macaddr_t *dest_addr);
+	bool (*available)(struct vsfip_netif_t *netif,
+						const struct vsfip_ipaddr_t *dest_addr);
 };
 
 struct vsfip_netdrv_t
@@ -63,6 +65,7 @@ struct vsfip_netdrv_t
 
 struct vsfip_netif_t
 {
+	void *priv;
 	struct vsfip_netdrv_t *drv;
 	struct vsfip_macaddr_t macaddr;
 

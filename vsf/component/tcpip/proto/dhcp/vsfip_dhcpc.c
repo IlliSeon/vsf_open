@@ -20,11 +20,6 @@
 
 #include "vsfip_dhcp_common.h"
 
-static struct vsfip_dhcpc_local_t vsfip_dhcpc =
-{
-	.xid = VSFIP_DHCPC_XID,
-};
-
 #define VSFIP_DHCPC_RETRY_CNT	10
 
 enum vsfip_dhcpc_EVT_t
@@ -46,6 +41,7 @@ static vsf_err_t vsfip_dhcpc_init_msg(struct vsfip_dhcpc_t *dhcpc, uint8_t op)
 		return VSFERR_FAIL;
 	}
 	buf = dhcpc->outbuffer;
+	buf->netif = dhcpc->netif;
 
 	head = (struct vsfip_dhcphead_t *)buf->app.buffer;
 	memset(head, 0, sizeof(struct vsfip_dhcphead_t));
@@ -158,7 +154,6 @@ vsfip_dhcpc_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		dhcpc->retry = 0;
 
 	retry:
-		dhcpc->xid = vsfip_dhcpc.xid++;
 		dhcpc->so = vsfip_socket(AF_INET, IPPROTO_UDP);
 		if (NULL == dhcpc->so)
 		{
@@ -261,6 +256,7 @@ vsf_err_t vsfip_dhcpc_start(struct vsfip_netif_t *netif,
 	netif->dhcp.dhcpc = dhcpc;
 	dhcpc->netif = netif;
 
+	dhcpc->xid = 0xABCDEF67;
 	dhcpc->sockaddr.sin_port = DHCP_SERVER_PORT;
 	dhcpc->sockaddr.sin_addr.size = 4;
 
