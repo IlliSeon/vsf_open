@@ -50,7 +50,7 @@ void vsfsm_evtq_init(struct vsfsm_evtq_t *queue)
 	queue->evt_count = 0;
 #if VSFSM_CFG_THREAD_EN
 	queue->cur_thread = NULL;
-	vsf_dynstack_init(&queue->thread_stack, sizeof(struct vsfsm_thread_t *), 2, 2);
+	queue->thread_stack = NULL;
 #endif
 }
 
@@ -240,11 +240,21 @@ update_cur_state:
 #endif
 }
 
-#if VSFSM_CFG_PREMPT_EN
 static vsf_err_t vsfsm_dispatch_evt_protected(struct vsfsm_t *sm, vsfsm_evt_t evt)
 {
+	vsf_err_t err;
+
+	sm->evt_count++;
+	err = vsfsm_dispatch_evt(sm, evt);
+	sm->evt_count--;
+	return err;
+}
+
+#if VSFSM_CFG_PREMPT_EN
+static vsf_err_t vsfsm_dispatch_evt_thread_protected(struct vsfsm_t *sm, vsfsm_evt_t evt)
+{
 	uint8_t origlevel = vsfhal_core_set_intlevel(VSFCFG_MAX_SRT_PRIO);
-	vsf_err_t err = vsfsm_dispatch_evt(sm, evt);
+	vsf_err_t err = vsfsm_dispatch_evt_protected(sm, evt);
 	vsfhal_core_set_intlevel(origlevel);
 	return err;
 }
@@ -383,6 +393,10 @@ vsf_err_t vsfsm_poll(void)
 		tmp = *vsfsm_cur_evtq->head;
 		(vsfsm_cur_evtq->head == &vsfsm_cur_evtq->queue[vsfsm_cur_evtq->size - 1]) ?
 			vsfsm_cur_evtq->head = &vsfsm_cur_evtq->queue[0] : vsfsm_cur_evtq->head++;
+		if (tmp.sm != NULL)
+		{
+			vsfsm_dispatch_evt(tmp.sm, tmp.evt);
+		}
 		vsf_enter_critical();
 		if (tmp.sm != NULL)
 		{
@@ -394,11 +408,6 @@ vsf_err_t vsfsm_poll(void)
 			vsfsm_cur_evtq->tick_evt_count--;
 		}
 		vsf_leave_critical();
-		// sm will be NULL after vsfsm_fini
-		if (tmp.sm != NULL)
-		{
-			vsfsm_dispatch_evt(tmp.sm, tmp.evt);
-		}
 	}
 	return VSFERR_NONE;
 }
@@ -424,15 +433,15 @@ vsf_err_t vsfsm_post_evt(struct vsfsm_t *sm, vsfsm_evt_t evt)
 				(evt & VSFSM_EVT_INSTANT_MSK)) ? VSFERR_FAIL :
 			// empty event queue, dispatch directly with protection
 			!sm->evtq ?
-				vsfsm_dispatch_evt_protected(sm, evt) :
+				vsfsm_dispatch_evt_thread_protected(sm, evt) :
 			(sm->evtq != vsfsm_cur_evtq) ||
 				(((evt & VSFSM_EVT_INSTANT_MSK) == 0) && sm->evt_count) ?
-				vsfsm_evtq_post(sm, evt) : vsfsm_dispatch_evt(sm, evt);
+				vsfsm_evtq_post(sm, evt) : vsfsm_dispatch_evt_protected(sm, evt);
 #else
 #if VSFSM_CFG_ACTIVE_EN
 			(!sm->active) ? VSFERR_FAIL :
 #endif
-			vsfsm_dispatch_evt(sm, evt);
+			vsfsm_dispatch_evt_protected(sm, evt);
 #endif
 }
 
@@ -448,7 +457,7 @@ vsf_err_t vsfsm_post_evt_pending(struct vsfsm_t *sm, vsfsm_evt_t evt)
 			(evt & VSFSM_EVT_INSTANT_MSK) ?
 				VSFERR_FAIL :
 			!sm->evtq ?
-				vsfsm_dispatch_evt_protected(sm, evt) :
+				vsfsm_dispatch_evt_thread_protected(sm, evt) :
 				vsfsm_evtq_post(sm, evt);
 #else
 			vsfsm_post_evt(sm, evt);
@@ -609,7 +618,9 @@ vsfsm_thread_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		return NULL;
 
 	thread->ret = &ret;
-	vsf_dynstack_push(&vsfsm_cur_evtq->thread_stack, &vsfsm_cur_evtq->cur_thread, 1);
+	if (vsfsm_cur_evtq->cur_thread != NULL)
+		vsfsm_cur_evtq->cur_thread->next = vsfsm_cur_evtq->thread_stack;
+	vsfsm_cur_evtq->thread_stack = vsfsm_cur_evtq->cur_thread;
 	vsfsm_cur_evtq->cur_thread = thread;
 	if (!setjmp(ret))
 	{
@@ -627,8 +638,9 @@ vsfsm_thread_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 	}
 	if ((thread->terminated) && (thread->op->on_terminate != NULL))
 		thread->op->on_terminate(thread);
-	vsfsm_cur_evtq->cur_thread =
-		*(struct vsfsm_thread_t **)vsf_dynstack_pop(&vsfsm_cur_evtq->thread_stack, 1);
+	vsfsm_cur_evtq->cur_thread = vsfsm_cur_evtq->thread_stack;
+	vsfsm_cur_evtq->thread_stack = vsfsm_cur_evtq->thread_stack != NULL ?
+		vsfsm_cur_evtq->thread_stack->next : NULL;
 	return NULL;
 }
 

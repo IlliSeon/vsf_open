@@ -167,7 +167,7 @@ struct vsfsm_evtq_t
 	volatile uint16_t tick_evt_count;
 #if VSFSM_CFG_THREAD_EN
 	struct vsfsm_thread_t *cur_thread;
-	struct vsf_dynstack_t thread_stack;
+	struct vsfsm_thread_t *thread_stack;
 #endif
 };
 void vsfsm_evtq_init(struct vsfsm_evtq_t *queue);
@@ -294,6 +294,7 @@ struct vsfsm_thread_t
 	struct vsfsm_t sm;
 	jmp_buf pos;
 	jmp_buf *ret;
+	struct vsfsm_thread_t *next;
 
 	unsigned terminated : 1;
 };
