@@ -23,8 +23,8 @@
 /*******************************************************
  * OHCI config
  *******************************************************/
-#define OHCI_ENABLE_ISO			0
-#define OHCI_ISO_PACKET_LIMIT	4
+#define OHCI_ENABLE_ISO			VSFHAL_HCD_ISO_SUPPORT
+#define OHCI_ISO_PACKET_LIMIT	VSFHAL_HCD_ISO_PACKET_LIMIT
 
 #define MAXPSW					1
 #define TD_MAX_NUM				64
@@ -364,11 +364,6 @@ struct urb_priv_t
 #define URB_PRIV_WAIT_COMPLETE	(0x1 << 5)
 #define URB_PRIV_WAIT_DELETE	(0x1 << 6)
 	struct td_t *td[TD_MAX_NUM_EACH_URB];	/* list pointer to all corresponding TDs associated with this request */
-#if OHCI_ENABLE_ISO
-	uint32_t number_of_packets;	/*!< number of packets (iso)		*/
-	uint32_t error_count;		/*!< number of errors (iso only)	*/
-	struct iso_packet_descriptor_t iso_frame_desc[OHCI_ISO_PACKET_LIMIT];
-#endif // OHCI_ENABLE_ISO
 };
 
 #endif	// __VSFOHCI_H_INCLUDED__

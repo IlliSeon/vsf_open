@@ -307,10 +307,12 @@ static void iso_td_fill(uint32_t info, void *data, uint16_t len, uint16_t index,
 {
 	struct td_t *td, *td_pt;
 	uint32_t bufferStart;
+	struct vsfhcd_urb_t *urb;
 
 	if (index > urb_priv->length)
 		return;
 
+	urb = container_of(urb_priv, struct vsfhcd_urb_t, priv);
 	td_pt = urb_priv->td[index];
 
 	// fill the old dummy TD
@@ -320,15 +322,15 @@ static void iso_td_fill(uint32_t info, void *data, uint16_t len, uint16_t index,
 	td->index = index;
 	td->urb_priv = urb_priv;
 
-	bufferStart = (uint32_t)data + urb_priv->iso_frame_desc[index].offset;
-	len = urb_priv->iso_frame_desc[index].length;
+	bufferStart = (uint32_t)data + urb->iso_frame_desc[index].offset;
+	len = urb->iso_frame_desc[index].length;
 
 	td->hwINFO = info;
 	td->hwCBP = (uint32_t)((!bufferStart || !len) ? 0 : bufferStart) & 0xfffff000;
 	td->hwBE = (uint32_t)((!bufferStart || !len) ? 0 : (uint32_t)bufferStart + len - 1);
 	td->hwNextTD = (uint32_t)td_pt;
 
-	td->hwPSW[0] = ((uint32_t)data + urb_priv->iso_frame_desc[index].offset) & 0x0FFF | 0xE000;
+	td->hwPSW[0] = ((uint32_t)data + urb->iso_frame_desc[index].offset) & 0x0FFF | 0xE000;
 
 	td_pt->hwNextTD = 0;
 	urb_priv->ed->hwTailP = td->hwNextTD;
@@ -391,7 +393,7 @@ static void td_submit_urb(struct vsfohci_t *ohci, struct vsfhcd_urb_t *urb)
 		break;
 #if OHCI_ENABLE_ISO
 	case PIPE_ISOCHRONOUS:
-		for (cnt = urb_priv->td_cnt; cnt < urb_priv->number_of_packets; cnt++)
+		for (cnt = urb_priv->td_cnt; cnt < urb->number_of_packets; cnt++)
 		{
 			iso_td_fill(TD_CC | TD_ISO | ((urb->start_frame + cnt) & 0xffff),
 					data, data_len, cnt, urb_priv);
@@ -542,7 +544,7 @@ static vsf_err_t td_done(struct vsfhcd_urb_t *urb, struct td_t *td)
 
 		cc = (tdPSW >> 12) & 0xf;
 		if (usb_pipeout(urb->pipe))
-			dlen = urb_priv->iso_frame_desc[td->index].length;
+			dlen = urb->iso_frame_desc[td->index].length;
 		else
 		{
 			if (cc == TD_DATAUNDERRUN)
@@ -550,8 +552,8 @@ static vsf_err_t td_done(struct vsfhcd_urb_t *urb, struct td_t *td)
 			dlen = tdPSW & 0x3ff;
 		}
 		urb->actual_length += dlen;
-		urb_priv->iso_frame_desc[td->index].actual_length = dlen;
-		urb_priv->iso_frame_desc[td->index].status = CC_TO_ERROR(cc);
+		urb->iso_frame_desc[td->index].actual_length = dlen;
+		urb->iso_frame_desc[td->index].status = CC_TO_ERROR(cc);
 	}
 	else
 #endif // OHCI_ENABLE_ISO
@@ -897,13 +899,13 @@ static vsf_err_t vsfohci_submit_urb(struct vsfhcd_t *hcd, struct vsfhcd_urb_t *u
 		break;
 #if OHCI_ENABLE_ISO
 	case PIPE_ISOCHRONOUS:
-		size = urb_priv->number_of_packets;
+		size = urb->number_of_packets;
 		if (size == 0)
 			return VSFERR_FAIL;
 		for (uint32_t i = 0; i < size; i++)
 		{
-			urb_priv->iso_frame_desc[i].actual_length = 0;
-			urb_priv->iso_frame_desc[i].status = VSFERR_FAIL;
+			urb->iso_frame_desc[i].actual_length = 0;
+			urb->iso_frame_desc[i].status = URB_PENDING;
 		}
 		break;
 #endif // OHCI_ENABLE_ISO
@@ -931,7 +933,7 @@ static vsf_err_t vsfohci_submit_urb(struct vsfhcd_t *hcd, struct vsfhcd_urb_t *u
 #if OHCI_ENABLE_ISO
 	if (usb_pipetype(urb->pipe) == PIPE_ISOCHRONOUS)
 	{
-		urb->start_frame = (ohci->hcca->frame_no + OHCI_ISO_DELAY) & 0xffff;
+		urb->start_frame += (ohci->hcca->frame_no + OHCI_ISO_DELAY) & 0xffff;
 	}
 #endif // OHCI_ENABLE_ISO
 
@@ -966,10 +968,11 @@ static vsf_err_t vsfohci_relink_urb(struct vsfhcd_t *hcd, struct vsfhcd_urb_t *u
 		if (urb_priv->state == (URB_PRIV_EDLINK | URB_PRIV_TDALLOC))
 		{
 			uint32_t i;
+			urb->status = URB_PENDING;
 			// NOTE: iso transfer interval fixed to 1
 			urb->start_frame = (ohci->hcca->frame_no + 1) & 0xffff;
-			for (i = 0; i < urb_priv->number_of_packets; i++)
-				urb_priv->iso_frame_desc[i].actual_length = 0;
+			for (i = 0; i < urb->number_of_packets; i++)
+				urb->iso_frame_desc[i].actual_length = 0;
 			td_submit_urb(ohci, urb);
 			return VSFERR_NONE;
 		}
