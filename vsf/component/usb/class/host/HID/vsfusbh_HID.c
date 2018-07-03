@@ -49,12 +49,12 @@ static vsf_err_t vsfusbh_hid_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	vsfusbh_alloc_urb_buffer(inurb, hid->hid_desc_len);
 	if (inurb->transfer_buffer == NULL) return VSFERR_FAIL;
 
-	if (vsfsm_crit_enter(&hid->dev->ep0_crit, &hid->sm))
+	if (vsfsm_crit_enter(&hid->dev->ep0_crit, pt->sm))
 		vsfsm_pt_wfe(pt, VSFSM_EVT_EP0_CRIT);
 
 	err = vsfusbh_get_class_descriptor(hid->usbh, inurb, hid->bInterfaceNumber,
 				USB_DT_REPORT, 0);
-	if (err != VSFERR_NONE) goto inurb_fail;
+	if (err != VSFERR_NONE) goto inurb_fail_crit;
 	vsfsm_pt_wfe(pt, VSFSM_EVT_URB_COMPLETE);
 	vsfsm_crit_leave(&hid->dev->ep0_crit);
 	if (inurb->status != URB_OK) goto inurb_fail;
@@ -93,6 +93,8 @@ static vsf_err_t vsfusbh_hid_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	vsfsm_pt_end(pt);
 	return VSFERR_NONE;
 
+inurb_fail_crit:
+	vsfsm_crit_leave(&hid->dev->ep0_crit);
 inurb_fail:
 	vsfusbh_free_urb_buffer(inurb);
 	return VSFERR_FAIL;

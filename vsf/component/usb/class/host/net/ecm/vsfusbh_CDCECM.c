@@ -187,7 +187,7 @@ static vsf_err_t vsfusbh_ecm_init_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	vsfsm_pt_wfe(pt, VSFSM_EVT_URB_COMPLETE);
 	if ((ecm->ctrl_urb->status != URB_OK) ||
 			(ecm->ctrl_urb->actual_length != ecm->ctrl_urb->transfer_length))
-		goto ret_failure;
+		goto ret_failure_crit;
 
 	{
 		char *str = (char *)ecm->ctrl_urb->transfer_buffer + 2;
@@ -202,14 +202,14 @@ static vsf_err_t vsfusbh_ecm_init_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 		ecm->netif.macaddr.addr.s_addr_buf[4], ecm->netif.macaddr.addr.s_addr_buf[5]);
 
 	err = vsfusbh_set_interface(usbh, ecm->ctrl_urb, ecm->data_iface, 0);
-	if (err) goto ret_error;
+	if (err) goto ret_error_crit;
 	vsfsm_pt_wfe(pt, VSFSM_EVT_URB_COMPLETE);
-	if (ecm->ctrl_urb->status != URB_OK) goto ret_failure;
+	if (ecm->ctrl_urb->status != URB_OK) goto ret_failure_crit;
 
 	err = vsfusbh_set_interface(usbh, ecm->ctrl_urb, ecm->data_iface, 1);
-	if (err) goto ret_error;
+	if (err) goto ret_error_crit;
 	vsfsm_pt_wfe(pt, VSFSM_EVT_URB_COMPLETE);
-	if (ecm->ctrl_urb->status != URB_OK) goto ret_failure;
+	if (ecm->ctrl_urb->status != URB_OK) goto ret_failure_crit;
 
 	vsfsm_crit_leave(&ecm->dev->ep0_crit);
 
@@ -240,6 +240,11 @@ static vsf_err_t vsfusbh_ecm_init_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	vsfsm_pt_end(pt);
 	return VSFERR_NONE;
 
+ret_error_crit:
+	vsfsm_crit_leave(&ecm->dev->ep0_crit);
+	goto ret_error;
+ret_failure_crit:
+	vsfsm_crit_leave(&ecm->dev->ep0_crit);
 ret_failure:
 	err = VSFERR_FAIL;
 ret_error:
