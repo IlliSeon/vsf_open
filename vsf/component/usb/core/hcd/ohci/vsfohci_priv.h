@@ -23,8 +23,12 @@
 /*******************************************************
  * OHCI config
  *******************************************************/
-#define OHCI_ENABLE_ISO			VSFHAL_HCD_ISO_SUPPORT
+#ifdef VSFHAL_HCD_ISO_EN
+#define OHCI_ENABLE_ISO			1
 #define OHCI_ISO_PACKET_LIMIT	VSFHAL_HCD_ISO_PACKET_LIMIT
+#else
+#define OHCI_ENABLE_ISO			0
+#endif
 
 #define MAXPSW					1
 #define TD_MAX_NUM				64

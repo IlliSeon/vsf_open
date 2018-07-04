@@ -2,6 +2,12 @@
 #ifndef __VSFHCD_H_INCLUDED__
 #define __VSFHCD_H_INCLUDED__
 
+#ifdef VSFHAL_HCD_ISO_EN
+#ifndef VSFHAL_HCD_ISO_PACKET_LIMIT
+#define VSFHAL_HCD_ISO_PACKET_LIMIT		2
+#endif
+#endif
+
 struct vsfhcd_device_t
 {
 	uint8_t devnum;
@@ -122,18 +128,23 @@ struct vsfhcd_urb_t
 	void *transfer_buffer;
 	uint32_t transfer_length;
 	uint32_t actual_length;
+	uint16_t interval;				/*!< polling interval (iso/irq only)*/
 
-	struct usb_ctrlrequest_t setup_packet;
+	union
+	{
+		struct usb_ctrlrequest_t setup_packet;
+#ifdef VSFHAL_HCD_ISO_EN
+		struct
+		{
+			uint32_t start_frame;			/*!< start frame (iso/irq only)		*/
+			uint32_t number_of_packets;		/*!< number of packets (iso)		*/
+			//uint32_t error_count;			/*!< number of errors (iso only)	*/
+			struct iso_packet_descriptor_t frame_desc[VSFHAL_HCD_ISO_PACKET_LIMIT];
+		} iso_packet;
+#endif // VSFHAL_HCD_ISO_EN
+	};
 
 	int16_t status;					/*!< returned status				*/
-	uint16_t interval;				/*!< polling interval (iso/irq only)*/
-#if VSFHAL_HCD_ISO_SUPPORT
-	uint32_t start_frame;			/*!< start frame (iso/irq only)		*/
-	uint32_t number_of_packets;		/*!< number of packets (iso)		*/
-	//uint32_t error_count;			/*!< number of errors (iso only)	*/
-	struct iso_packet_descriptor_t iso_frame_desc[VSFHAL_HCD_ISO_PACKET_LIMIT];
-#endif // VSFHAL_HCD_ISO_SUPPORT
-	
 	uint32_t timeout;
 	struct vsfsm_t *notifier_sm;
 
