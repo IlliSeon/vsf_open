@@ -775,19 +775,26 @@ void USB_Istr(void)
 		IrqSt &= HSUSBD->BUSINTEN;
 
 		if (IrqSt & HSUSBD_BUSINTSTS_SOFIF_Msk) {
+			IrqSt &= ~HSUSBD_BUSINTSTS_SOFIF_Msk;
 			vsfhal_usbd_cb(VSFHAL_USBD_ON_SOF, 0);
 		}
 		if (IrqSt & HSUSBD_BUSINTSTS_RSTIF_Msk) {
+			IrqSt &= ~HSUSBD_BUSINTSTS_RSTIF_Msk;
 			vsfhal_status_out = false;
 			vsfhal_usbd_cb(VSFHAL_USBD_ON_RESET, 0);
 			HSUSBD->BUSINTSTS = HSUSBD_BUSINTSTS_RSTIF_Msk;
 			HSUSBD->CEPINTSTS = 0x1ffc;
 		}
 		if (IrqSt & HSUSBD_BUSINTSTS_RESUMEIF_Msk) {
+			IrqSt &= ~HSUSBD_BUSINTSTS_RESUMEIF_Msk;
 			vsfhal_usbd_cb(VSFHAL_USBD_ON_RESUME, 0);
 		}
 		if (IrqSt & HSUSBD_BUSINTSTS_SUSPENDIF_Msk) {
+			IrqSt &= ~HSUSBD_BUSINTSTS_SUSPENDIF_Msk;
 			vsfhal_usbd_cb(VSFHAL_USBD_ON_SUSPEND, 0);
+		}
+		if (IrqSt) {
+			HSUSBD->BUSINTSTS = IrqSt;
 		}
 	}
 

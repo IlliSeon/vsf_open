@@ -41,7 +41,7 @@ static vsf_err_t vsfip_dhcpc_init_msg(struct vsfip_dhcpc_t *dhcpc, uint8_t op)
 		return VSFERR_FAIL;
 	}
 	buf = dhcpc->outbuffer;
-	buf->netif = dhcpc->netif;
+	vsfip_buffer_set_netif(buf, dhcpc->netif);
 
 	head = (struct vsfip_dhcphead_t *)buf->app.buffer;
 	memset(head, 0, sizeof(struct vsfip_dhcphead_t));
@@ -169,6 +169,7 @@ vsfip_dhcpc_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		// if address already allocated, do resume, send request again
 		if (dhcpc->ipaddr.size != 0)
 		{
+			dhcpc->netif->ipaddr = dhcpc->ipaddr;
 			goto dhcp_request;
 		}
 
@@ -188,7 +189,11 @@ vsfip_dhcpc_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		break;
 	case VSFIP_DHCP_EVT_SEND_REQUEST:
 	dhcp_request:
-		vsftimer_free(dhcpc->to);
+		if (dhcpc->to != NULL)
+		{
+			vsftimer_free(dhcpc->to);
+			dhcpc->to = NULL;
+		}
 		if (vsfip_dhcpc_init_msg(dhcpc, (uint8_t)DHCPOP_REQUEST) < 0)
 		{
 			goto cleanup;
@@ -204,7 +209,11 @@ vsfip_dhcpc_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		dhcpc->to = vsftimer_create(sm, 2000, 1, VSFIP_DHCP_EVT_TIMEROUT);
 		break;
 	case VSFIP_DHCP_EVT_READY:
-		vsftimer_free(dhcpc->to);
+		if (dhcpc->to != NULL)
+		{
+			vsftimer_free(dhcpc->to);
+			dhcpc->to = NULL;
+		}
 		// update netif->ipaddr
 		dhcpc->ready = 1;
 		netif->ipaddr = dhcpc->ipaddr;
@@ -234,15 +243,31 @@ vsfip_dhcpc_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 			goto retry;
 		}
 
-		// notify callder
-		if (dhcpc->update_sem.evt != VSFSM_EVT_NONE)
-		{
-			vsfsm_sem_post(&dhcpc->update_sem);
-		}
+		vsfsm_notifier_notify(&dhcpc->notifier);
 		break;
 	}
 
 	return NULL;
+}
+
+void vsfip_dhcpc_stop(struct vsfip_dhcpc_t *dhcpc)
+{
+	if (dhcpc->netif != NULL)
+	{
+		if (dhcpc->to != NULL)
+		{
+			vsftimer_free(dhcpc->to);
+			dhcpc->to = NULL;
+		}
+		if (dhcpc->so != NULL)
+		{
+			vsfip_close(dhcpc->so);
+			dhcpc->so = NULL;
+		}
+		vsfsm_fini(&dhcpc->sm);
+
+		dhcpc->netif = NULL;
+	}
 }
 
 vsf_err_t vsfip_dhcpc_start(struct vsfip_netif_t *netif,

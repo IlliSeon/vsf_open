@@ -49,12 +49,19 @@ PACKED_HEAD struct PACKED_MID vsfip_arphead_t
 	uint16_t op;
 }; PACKED_TAIL
 
+static void vsfip_netif_destruct(struct vsfip_netif_t *netif)
+{
+	vsfsm_fini(&netif->arpc.sm);
+//	vsfsm_sem_fini(&netif->arpc.sem);
+//	vsfsm_sem_fini(&netif->output_sem);
+//	vsfq_fini(&netif->outq);
+}
+
 static vsf_err_t vsfip_netif_arp_client_thread(struct vsfsm_pt_t *pt,
 												vsfsm_evt_t evt);
-vsf_err_t vsfip_netif_construct(struct vsfip_netif_t *netif)
+static vsf_err_t vsfip_netif_construct(struct vsfip_netif_t *netif)
 {
 	vsfq_init(&netif->outq);
-	netif->arpc.to.notifier.evt = VSFIP_NETIF_EVT_ARPC_TIMEOUT;
 	netif->arpc.buf = NULL;
 	netif->arp_time = 1;
 
@@ -76,6 +83,29 @@ vsf_err_t vsfip_netif_fini(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	return ((struct vsfip_netif_t *)pt->user_data)->drv->op->fini(pt, evt);
 }
 
+void vsfip_netif_reference(struct vsfip_netif_t *netif)
+{
+	if (!netif->ref++)
+	{
+		vsfip_netif_construct(netif);
+	}
+	vsfdbg_printf("netif: ref %d\r\n", netif->ref);
+}
+
+void vsfip_netif_release(struct vsfip_netif_t *netif)
+{
+	netif->ref--;
+	vsfdbg_printf("netif: ref %d\r\n", netif->ref);
+	if (!netif->ref)
+	{
+		vsfip_netif_destruct(netif);
+		if (netif->tofree && (netif->drv->op->free != NULL))
+		{
+			netif->drv->op->free(netif);
+		}
+	}
+}
+
 static struct vsfip_macaddr_t *
 vsfip_netif_get_mac(struct vsfip_netif_t *netif, struct vsfip_ipaddr_t *ip)
 {
@@ -95,7 +125,7 @@ vsfip_netif_get_mac(struct vsfip_netif_t *netif, struct vsfip_ipaddr_t *ip)
 	return NULL;
 }
 
-static vsf_err_t vsfip_netif_ip_output_do(struct vsfip_buffer_t *buf,
+static vsf_err_t vsfip_netif_output(struct vsfip_buffer_t *buf,
 					enum vsfip_netif_proto_t proto, struct vsfip_macaddr_t *mac)
 {
 	struct vsfip_netif_t *netif = buf->netif;
@@ -174,7 +204,7 @@ vsf_err_t vsfip_netif_ip_output(struct vsfip_buffer_t *buf)
 	}
 	else if (buf->buf.size)
 	{
-		return vsfip_netif_ip_output_do(buf, VSFIP_NETIF_PROTO_IP, mac);
+		return vsfip_netif_output(buf, VSFIP_NETIF_PROTO_IP, mac);
 	}
 	return VSFERR_NONE;
 }
@@ -267,7 +297,7 @@ void vsfip_netif_arp_input(struct vsfip_buffer_t *buf)
 					ipaddr.addr.s_addr_buf, head->protolen);
 
 			// send ARP reply
-			vsfip_netif_ip_output_do(buf, VSFIP_NETIF_PROTO_ARP, &macaddr);
+			vsfip_netif_output(buf, VSFIP_NETIF_PROTO_ARP, &macaddr);
 			return;
 		}
 		break;
@@ -305,7 +335,7 @@ static struct vsfip_buffer_t *vsfip_netif_prepare_arp_request(
 		struct vsfip_arphead_t *head;
 		uint8_t *ptr;
 
-		buf->netif = netif;
+		vsfip_buffer_set_netif(buf, netif);
 
 		buf->buf.buffer += headsize;
 		head = (struct vsfip_arphead_t *)buf->buf.buffer;
@@ -367,13 +397,14 @@ static vsf_err_t vsfip_netif_arp_client_thread(struct vsfsm_pt_t *pt,
 												netif, &netif->arpc.ip_for_mac);
 				if (netif->arpc.buf != NULL)
 				{
-					if (!vsfip_netif_ip_output_do(netif->arpc.buf,
+					if (!vsfip_netif_output(netif->arpc.buf,
 							VSFIP_NETIF_PROTO_ARP, &netif->mac_broadcast))
 					{
 						netif->arpc.sm_pending = pt->sm;
 						// wait for reply with timeout
 						netif->arpc.to.interval = VSFIP_CFG_ARP_TIMEOUT_MS;
-						netif->arpc.to.notifier.sm = pt->sm;
+						vsfsm_notifier_set_evt(&netif->arpc.to.notifier, pt->sm,
+							VSFIP_NETIF_EVT_ARPC_TIMEOUT);
 						netif->arpc.to.trigger_cnt = 1;
 						vsftimer_enqueue(&netif->arpc.to);
 
@@ -403,7 +434,7 @@ static vsf_err_t vsfip_netif_arp_client_thread(struct vsfsm_pt_t *pt,
 			}
 			else
 			{
-				vsfip_netif_ip_output_do(netif->arpc.cur_request,
+				vsfip_netif_output(netif->arpc.cur_request,
 											VSFIP_NETIF_PROTO_IP, mac);
 			}
 		}

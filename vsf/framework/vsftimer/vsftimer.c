@@ -159,6 +159,7 @@ void vsftimer_free(struct vsftimer_t *timer)
 	vsfsm_sched_unlock(origlevel);
 }
 
+extern void vsfsm_notifier_notify_evt(struct vsfsm_notifier_t *notifier);
 void vsftimer_clean_sm(struct vsfsm_t *sm)
 {
 	uint8_t origlevel = vsfsm_sched_lock();
@@ -168,8 +169,8 @@ void vsftimer_clean_sm(struct vsfsm_t *sm)
 	while (timer != NULL)
 	{
 		timer_next = container_of(timer->node.next, struct vsftimer_t, node);
-		if (sm && (timer->notifier.evt != VSFSM_EVT_INVALID) &&
-			(timer->notifier.sm == sm))
+		if (sm && (timer->notifier.notify == vsfsm_notifier_notify_evt) &&
+			(timer->notifier.evt.sm == sm))
 		{
 			vsftimer_free(timer);
 		}

@@ -758,32 +758,54 @@ vsf_err_t vsfsm_sync_decrease(struct vsfsm_sync_t *sync, struct vsfsm_t *sm)
 #endif	// VSFSM_CFG_SYNC_EN
 
 // notifier
+void vsfsm_notifier_notify_evt(struct vsfsm_notifier_t *notifier)
+{
+	if ((notifier->evt.sm != NULL) && (notifier->evt.evt != VSFSM_EVT_INVALID))
+	{
+		vsfsm_post_evt(notifier->evt.sm, notifier->evt.evt);
+	}
+}
+
+void vsfsm_notifier_notify_cb(struct vsfsm_notifier_t *notifier)
+{
+	if (notifier->cb.cb != NULL)
+	{
+		notifier->cb.cb(notifier->cb.param);
+	}
+}
+
+void vsfsm_notifier_notify_sem(struct vsfsm_notifier_t *notifier)
+{
+	if (notifier->sem.sem != NULL)
+	{
+		vsfsm_sem_post(notifier->sem.sem);
+	}
+}
+
 void vsfsm_notifier_set_cb(struct vsfsm_notifier_t *notifier,
 			void (*cb)(void *param), void *param)
 {
-	notifier->evt = VSFSM_EVT_INVALID;
-	notifier->cb = cb;
-	notifier->param = param;
+	notifier->notify = vsfsm_notifier_notify_cb;
+	notifier->cb.param = param;
+	notifier->cb.cb = cb;
 }
 
 void vsfsm_notifier_set_evt(struct vsfsm_notifier_t *notifier,
 			struct vsfsm_t *sm, vsfsm_evt_t evt)
 {
-	notifier->evt = evt;
-	notifier->sm = sm;
+	notifier->notify = vsfsm_notifier_notify_evt;
+	notifier->evt.evt = evt;
+	notifier->evt.sm = sm;
+}
+
+void vsfsm_notifier_set_sem(struct vsfsm_notifier_t *notifier,
+			struct vsfsm_sem_t *sem)
+{
+	notifier->notify = vsfsm_notifier_notify_sem;
+	notifier->sem.sem = sem;
 }
 
 void vsfsm_notifier_notify(struct vsfsm_notifier_t *notifier)
 {
-	if (notifier->evt != VSFSM_EVT_INVALID)
-	{
-		if (notifier->sm != NULL)
-		{
-			vsfsm_post_evt(notifier->sm, notifier->evt);
-		}
-	}
-	else if (notifier->cb != NULL)
-	{
-		notifier->cb(notifier->param);
-	}
+	notifier->notify(notifier);
 }

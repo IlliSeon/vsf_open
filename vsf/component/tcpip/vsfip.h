@@ -133,7 +133,6 @@ struct vsfip_ippcb_t
 {
 	struct vsfip_ipaddr_t src;
 	struct vsfip_ipaddr_t dest;
-	struct vsfip_buffer_t *buf;
 
 	struct vsfsm_pt_t output_pt;
 
@@ -350,6 +349,8 @@ vsf_err_t vsfip_netif_remove(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 vsf_err_t vsfip_init(struct vsfip_mem_op_t *mem_op);
 vsf_err_t vsfip_fini(void);
 
+// vsfip_buffer_set_netif MUST be called protected
+void vsfip_buffer_set_netif(struct vsfip_buffer_t *buf, struct vsfip_netif_t *netif);
 uint8_t vsfip_get_localaddr(void);
 
 // different from stant socket call,

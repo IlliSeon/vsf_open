@@ -16,36 +16,18 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-#ifndef __VSFIP_DHCPC_H_INCLUDED__
-#define __VSFIP_DHCPC_H_INCLUDED__
 
-struct vsfip_dhcpc_t
+#ifndef __VSFUSBH_IPHETH_H_INCLUDED__
+#define __VSFUSBH_IPHETH_H_INCLUDED__
+
+extern const struct vsfusbh_class_drv_t vsfusbh_ipheth_drv;
+
+struct vsfusbh_ipheth_cb_t
 {
-	struct vsfip_netif_t *netif;
-	struct vsfsm_notifier_t notifier;
-	struct vsfsm_t sm;
-	struct vsfip_socket_t *so;
-	struct vsfip_sockaddr_t sockaddr;
-	struct vsfip_buffer_t *outbuffer;
-	struct vsfip_buffer_t *inbuffer;
-	struct vsfip_ipaddr_t ipaddr;
-	struct vsfip_ipaddr_t gw;
-	struct vsfip_ipaddr_t netmask;
-	struct vsfip_ipaddr_t dns[2];
-	struct vsftimer_t *to;
-	uint32_t xid;
-	uint32_t optlen;
-	uint32_t retry;
-	uint32_t arp_retry;
-	uint32_t leasetime;
-	uint32_t renew_time;
-	uint32_t rebinding_time;
-	unsigned ready : 1;
+	void *param;
+	void (*on_connect)(void *param, struct vsfip_netif_t *netif);
+	void (*on_disconnect)(void *param, struct vsfip_netif_t *netif);
 };
+extern struct vsfusbh_ipheth_cb_t vsfusbh_ipheth_cb;
 
-#ifndef VSFCFG_EXCLUDE_DHCPC
-vsf_err_t vsfip_dhcpc_start(struct vsfip_netif_t*, struct vsfip_dhcpc_t*);
-void vsfip_dhcpc_stop(struct vsfip_dhcpc_t *dhcpc);
-#endif
-
-#endif		// __VSFIP_DHCPC_H_INCLUDED__
+#endif // __VSFUSBH_IPHETH_H_INCLUDED__

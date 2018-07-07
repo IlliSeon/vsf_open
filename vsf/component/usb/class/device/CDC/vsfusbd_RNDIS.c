@@ -84,7 +84,7 @@ static void vsfusbd_RNDIS_on_rx_finish(void *param)
 				rxbuf->buf.buffer +=
 							sizeof(struct rndis_msghead_t) + packet->DataOffset;
 				rxbuf->buf.size = packet->DataLength;
-				rxbuf->netif = &rndis_param->netif;
+				vsfip_buffer_set_netif(rxbuf, &rndis_param->netif);
 				vsfip_eth_input(rxbuf);
 			}
 			else
@@ -162,7 +162,7 @@ static vsf_err_t vsfusbd_RNDIS_netdrv_fini(struct vsfsm_pt_t *pt, vsfsm_evt_t ev
 
 static struct vsfip_netdrv_op_t vsfusbd_RNDIS_netdrv_op =
 {
-	vsfusbd_RNDIS_netdrv_init, vsfusbd_RNDIS_netdrv_fini, vsfip_eth_header
+	vsfusbd_RNDIS_netdrv_init, vsfusbd_RNDIS_netdrv_fini, NULL, vsfip_eth_header
 };
 
 // rndis

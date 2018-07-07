@@ -47,6 +47,7 @@ struct vsfip_netdrv_op_t
 {
 	vsf_err_t (*init)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt);
 	vsf_err_t (*fini)(struct vsfsm_pt_t *pt, vsfsm_evt_t evt);
+	void (*free)(struct vsfip_netif_t *netif);
 
 	vsf_err_t (*header)(struct vsfip_buffer_t *buf,
 						enum vsfip_netif_proto_t proto,
@@ -65,7 +66,6 @@ struct vsfip_netdrv_t
 
 struct vsfip_netif_t
 {
-	void *priv;
 	struct vsfip_netdrv_t *drv;
 	struct vsfip_macaddr_t macaddr;
 
@@ -77,6 +77,8 @@ struct vsfip_netif_t
 	struct vsfip_macaddr_t mac_broadcast;
 
 	uint16_t mtu;
+	uint8_t ref;
+	uint8_t tofree : 1;
 
 	// output bufferlist and semaphore
 	struct vsfq_t outq;
@@ -116,10 +118,12 @@ struct vsfip_netif_t
 	struct vsflist_t list;
 };
 
-vsf_err_t vsfip_netif_construct(struct vsfip_netif_t *netif);
 vsf_err_t vsfip_netif_init(struct vsfsm_pt_t *pt, vsfsm_evt_t evt);
 vsf_err_t vsfip_netif_fini(struct vsfsm_pt_t *pt, vsfsm_evt_t evt);
 vsf_err_t vsfip_netif_ip_output(struct vsfip_buffer_t *buf);
+
+void vsfip_netif_reference(struct vsfip_netif_t *netif);
+void vsfip_netif_release(struct vsfip_netif_t *netif);
 
 void vsfip_netif_ip4_input(struct vsfip_buffer_t *buf);
 void vsfip_netif_ip6_input(struct vsfip_buffer_t *buf);

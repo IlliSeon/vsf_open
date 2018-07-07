@@ -188,8 +188,7 @@ vsfusbd_HID_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		}
 
 		// enable timer
-		param->timer4ms.notifier.sm = sm;
-		param->timer4ms.notifier.evt = VSFUSBD_HID_EVT_TIMER4MS;
+		vsfsm_notifier_set_evt(&param->timer4ms.notifier, sm, VSFUSBD_HID_EVT_TIMER4MS);
 		param->timer4ms.interval = 4;
 		param->timer4ms.trigger_cnt = -1;
 		vsftimer_enqueue(&param->timer4ms);

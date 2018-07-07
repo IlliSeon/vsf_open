@@ -37,7 +37,7 @@ struct vsfusbh_ecm_t
 
 	struct vsfip_netif_t netif;
 	struct vsfip_netdrv_t netdrv;
-	bool netif_inited;
+	bool connected;
 	struct vsfip_buffer_t *tx_buffer;
 	struct vsfip_buffer_t *rx_buffer;
 
@@ -104,9 +104,13 @@ vsfusbh_ecm_in_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 			vsfdbg_printf("cdc_ecm_input: ");
 			vsfdbg_printb(urb->transfer_buffer, urb->actual_length, 1, 16, true, true);
 
-			ecm->rx_buffer->netif = &ecm->netif;
-			vsfip_eth_input(ecm->rx_buffer);
-			ecm->rx_buffer = vsfip_buffer_get(ecm->max_segment_size);
+			ecm->rx_buffer->buf.size = urb->actual_length;
+			if (ecm->connected)
+			{
+				vsfip_buffer_set_netif(ecm->rx_buffer, &ecm->netif);
+				vsfip_eth_input(ecm->rx_buffer);
+				ecm->rx_buffer = vsfip_buffer_get(ecm->max_segment_size);
+			}
 		}
 		else
 		{
@@ -143,16 +147,16 @@ static void vsfusbh_ecm_on_event(struct vsfusbh_ecm_t *ecm)
 			.user_data = &ecm->netif,
 		};
 
-		if (ecm->netif_inited && (ecm->evt[2] == 0))
+		if (ecm->connected && (ecm->evt[2] == 0))
 		{
 			vsfdbg_prints("cdc_ecm_event: NETWORK_CONNECTION Disconnected" VSFCFG_DEBUG_LINEEND);
 
 			// disconnect netif, for ecm netif_remove is non-block
-			vsfip_netif_remove(&pt, 0, &ecm->netif);
 			if (vsfusbh_ecm_cb.on_disconnect != NULL)
 				vsfusbh_ecm_cb.on_disconnect(vsfusbh_ecm_cb.param, &ecm->netif);
+			vsfip_netif_remove(&pt, 0, &ecm->netif);
 		}
-		else if (!ecm->netif_inited && (ecm->evt[2] != 0))
+		else if (!ecm->connected && (ecm->evt[2] != 0))
 		{
 			vsfdbg_prints("cdc_ecm_event: NETWORK_CONNECTION Connected" VSFCFG_DEBUG_LINEEND);
 
@@ -297,7 +301,7 @@ static vsf_err_t vsfusbh_ecm_netdrv_init(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 	netif->mtu = ecm->max_segment_size - VSFIP_ETH_HEADSIZE;
 	netif->drv->netif_header_size = VSFIP_ETH_HEADSIZE;
 	netif->drv->hwtype = VSFIP_ETH_HWTYPE;
-	ecm->netif_inited = true;
+	ecm->connected = true;
 
 	// start pt to receive output_sem
 	ecm->netdrv_out_sm.init_state.evt_handler = vsfusbh_ecm_netdrv_evt_handler;
@@ -307,13 +311,22 @@ static vsf_err_t vsfusbh_ecm_netdrv_init(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 
 static vsf_err_t vsfusbh_ecm_netdrv_fini(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 {
-	((struct vsfusbh_ecm_t *)pt->user_data)->netif_inited = false;
+	struct vsfip_netif_t *netif = (struct vsfip_netif_t *)pt->user_data;
+	struct vsfusbh_ecm_t *ecm = (struct vsfusbh_ecm_t *)netif->drv->param;
+	ecm->connected = false;
 	return VSFERR_NONE;
+}
+
+static void vsfusbh_ecm_netdrv_free(struct vsfip_netif_t *netif)
+{
+	vsfdbg_printf("cdc_ecm: netif %04X freed\r\n", netif);
+	vsf_bufmgr_free(netif);
 }
 
 static struct vsfip_netdrv_op_t vsfusbh_ecm_netdrv_op =
 {
-	vsfusbh_ecm_netdrv_init, vsfusbh_ecm_netdrv_fini, vsfip_eth_header
+	vsfusbh_ecm_netdrv_init, vsfusbh_ecm_netdrv_fini, vsfusbh_ecm_netdrv_free,
+	vsfip_eth_header
 };
 
 static void *vsfusbh_ecm_probe(struct vsfusbh_t *usbh,
@@ -453,7 +466,14 @@ static void vsfusbh_ecm_disconnect(struct vsfusbh_t *usbh,
 {
 	struct vsfusbh_ecm_t *ecm = (struct vsfusbh_ecm_t *)priv;
 
-	if (ecm->netif_inited)
+	vsfusbh_ecm_free_urb(usbh, ecm);
+	vsfsm_fini(&ecm->in_sm);
+	vsfsm_fini(&ecm->sm);
+	vsfsm_fini(&ecm->netdrv_out_sm);
+
+	// DO NOT free ecm here, ecm will be free in vsfusbh_ecm_netdrv_free
+	ecm->netif.tofree = true;
+	if (ecm->connected)
 	{
 		struct vsfsm_pt_t pt =
 		{
@@ -462,16 +482,14 @@ static void vsfusbh_ecm_disconnect(struct vsfusbh_t *usbh,
 			.user_data = &ecm->netif,
 		};
 
-		vsfip_netif_remove(&pt, 0, &ecm->netif);
 		if (vsfusbh_ecm_cb.on_disconnect != NULL)
 			vsfusbh_ecm_cb.on_disconnect(vsfusbh_ecm_cb.param, &ecm->netif);
+		vsfip_netif_remove(&pt, 0, &ecm->netif);
 	}
-
-	vsfusbh_ecm_free_urb(usbh, ecm);
-	vsfsm_fini(&ecm->in_sm);
-	vsfsm_fini(&ecm->sm);
-	vsfsm_fini(&ecm->netdrv_out_sm);
-	vsf_bufmgr_free(ecm);
+	else if (!ecm->netif.ref)
+	{
+		vsfusbh_ecm_netdrv_free(&ecm->netif);
+	}
 }
 
 static const struct vsfusbh_device_id_t vsfusbh_ecm_id_table[] =
