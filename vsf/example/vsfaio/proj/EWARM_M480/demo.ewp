@@ -2379,6 +2379,15 @@
     <group>
       <name>hal</name>
       <group>
+        <name>arch</name>
+        <group>
+          <name>arm_cm</name>
+          <file>
+            <name>$PROJ_DIR$\..\..\..\..\hal\arch\arm_cm\vsfmain.c</name>
+          </file>
+        </group>
+      </group>
+      <group>
         <name>cpu</name>
         <group>
           <name>gd32</name>
@@ -2401,12 +2410,6 @@
             <name>usbd</name>
             <file>
               <name>$PROJ_DIR$\..\..\..\..\hal\cpu\gd32f1x0\usbd\GD32F1X0_USBD.c</name>
-            </file>
-          </group>
-          <group>
-            <name>usbhio</name>
-            <file>
-              <name>$PROJ_DIR$\..\..\..\..\hal\cpu\gd32f1x0\usbhio\GD32F1X0_USBHIO.c</name>
             </file>
           </group>
           <file>
@@ -2460,9 +2463,6 @@
         <name>$PROJ_DIR$\..\..\..\..\hal\vsfhal.c</name>
       </file>
     </group>
-    <file>
-      <name>$PROJ_DIR$\..\..\..\..\vsfmain.c</name>
-    </file>
   </group>
 </project>
 

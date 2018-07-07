@@ -1,6 +1,6 @@
 struct usrapp_t
 {
-	struct usart_stream_info_t usart_stream;
+	struct vsf_usart_stream_t usart_stream;
 
 	struct
 	{

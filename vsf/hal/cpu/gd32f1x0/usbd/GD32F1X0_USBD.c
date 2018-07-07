@@ -17,6 +17,8 @@
 #include "vsf.h"
 #include "core.h"
 
+#include "GD32F1X0_USBD.h"
+
 // USB registers
 #define RegBase							0x40005C00L
 #define PMAAddr							0x40006000L
@@ -292,6 +294,12 @@ vsf_err_t vsfhal_usbd_resume(void)
 
 vsf_err_t vsfhal_usbd_lowpower(uint8_t level)
 {
+	return VSFERR_NONE;
+}
+
+vsf_err_t vsfhal_usbd_wakeup(void)
+{
+	// todo
 	return VSFERR_NONE;
 }
 
@@ -913,7 +921,11 @@ vsf_err_t vsfhal_usbd_ep_enable_OUT(uint8_t idx)
 
 
 
-
+static void vsfhal_usbd_cb(enum vsfhal_usbd_evt_t evt, uint32_t value)
+{
+	if (vsfhal_usbd_callback.on_event != NULL)
+		vsfhal_usbd_callback.on_event(vsfhal_usbd_callback.param, evt, value);
+}
 
 void CTR_LP(void)
 {
@@ -932,11 +944,7 @@ void CTR_LP(void)
 			if ((wIstr & USB_ISTR_DIR) == 0)
 			{
 				ClearEP_CTR_TX(0);
-				if (vsfhal_usbd_callback.on_in != NULL)
-				{
-					vsfhal_usbd_callback.on_in(vsfhal_usbd_callback.param,
-												epaddr);
-				}
+				vsfhal_usbd_cb(VSFHAL_USBD_ON_IN, epaddr);
 				return;
 			}
 			else
@@ -945,18 +953,11 @@ void CTR_LP(void)
 				ClearEP_CTR_RX(0);
 				if ((wEPVal & USB_EP0R_SETUP) != 0)
 				{
-					if (vsfhal_usbd_callback.on_setup != NULL)
-					{
-						vsfhal_usbd_callback.on_setup(vsfhal_usbd_callback.param);
-					}
+					vsfhal_usbd_cb(VSFHAL_USBD_ON_SETUP, 0);
 				}
 				else if ((wEPVal & USB_EP0R_CTR_RX) != 0)
 				{
-					if (vsfhal_usbd_callback.on_out != NULL)
-					{
-						vsfhal_usbd_callback.on_out(vsfhal_usbd_callback.param,
-													epaddr);
-					}
+					vsfhal_usbd_cb(VSFHAL_USBD_ON_OUT, epaddr);
 				}
 				return;
 			}
@@ -967,20 +968,12 @@ void CTR_LP(void)
 			if ((wEPVal & USB_EP0R_CTR_RX) != 0)
 			{
 				ClearEP_CTR_RX(EPindex);
-				if ((vsfhal_usbd_callback.on_out != NULL) && (epaddr >= 0))
-				{
-					vsfhal_usbd_callback.on_out(vsfhal_usbd_callback.param,
-												epaddr);
-				}
+				vsfhal_usbd_cb(VSFHAL_USBD_ON_OUT, epaddr);
 			}
 			if ((wEPVal & USB_EP0R_CTR_TX) != 0)
 			{
 				ClearEP_CTR_TX(EPindex);
-				if ((vsfhal_usbd_callback.on_in != NULL) && (epaddr >= 0))
-				{
-					vsfhal_usbd_callback.on_in(vsfhal_usbd_callback.param,
-												epaddr);
-				}
+				vsfhal_usbd_cb(VSFHAL_USBD_ON_IN, epaddr);
 			}
 		}
 	}
@@ -1003,18 +996,12 @@ void CTR_HP(void)
 		if ((wEPVal & USB_EP0R_CTR_RX) != 0)
 		{
 			ClearEP_CTR_RX(EPindex);
-			if ((vsfhal_usbd_callback.on_out != NULL) && (epaddr >= 0))
-			{
-				vsfhal_usbd_callback.on_out(vsfhal_usbd_callback.param, epaddr);
-			}
+			vsfhal_usbd_cb(VSFHAL_USBD_ON_OUT, epaddr);
 		}
 		else if ((wEPVal & USB_EP0R_CTR_TX) != 0)
 		{
 			ClearEP_CTR_TX(EPindex);
-			if ((vsfhal_usbd_callback.on_in != NULL) && (epaddr >= 0))
-			{
-				vsfhal_usbd_callback.on_in(vsfhal_usbd_callback.param, epaddr);
-			}
+			vsfhal_usbd_cb(VSFHAL_USBD_ON_IN, epaddr);
 		}
 	}
 }
@@ -1026,10 +1013,7 @@ void USB_Istr(void)
 	if (wIstr & USB_ISTR_RESET)
 	{
 		*ISTR = ~USB_ISTR_RESET;
-		if (vsfhal_usbd_callback.on_reset != NULL)
-		{
-			vsfhal_usbd_callback.on_reset(vsfhal_usbd_callback.param);
-		}
+		vsfhal_usbd_cb(VSFHAL_USBD_ON_RESET, 0);
 	}
 	if (wIstr & USB_ISTR_PMAOVR)
 	{
@@ -1038,48 +1022,27 @@ void USB_Istr(void)
 	if (wIstr & USB_ISTR_ERR)
 	{
 		*ISTR = ~USB_ISTR_ERR;
-		if (vsfhal_usbd_callback.on_error != NULL)
-		{
-			vsfhal_usbd_callback.on_error(vsfhal_usbd_callback.param,
-											USBERR_ERROR);
-		}
+		vsfhal_usbd_cb(VSFHAL_USBD_ON_ERROR, USBERR_ERROR);
 	}
 	if (wIstr & USB_ISTR_WKUP)
 	{
 		*ISTR = ~USB_ISTR_WKUP;
-		if (vsfhal_usbd_callback.on_wakeup != NULL)
-		{
-			vsfhal_usbd_callback.on_wakeup(vsfhal_usbd_callback.param);
-		}
+		vsfhal_usbd_cb(VSFHAL_USBD_ON_RESUME, 0);
 	}
 	if (wIstr & USB_ISTR_SUSP)
 	{
-		if (vsfhal_usbd_callback.on_suspend != NULL)
-		{
-			vsfhal_usbd_callback.on_suspend(vsfhal_usbd_callback.param);
-		}
+		vsfhal_usbd_cb(VSFHAL_USBD_ON_SUSPEND, 0);
 		*ISTR = ~USB_ISTR_SUSP;
 	}
 	if (wIstr & USB_ISTR_SOF)
 	{
+		vsfhal_usbd_cb(VSFHAL_USBD_ON_SOF, 0);
 		*ISTR = ~USB_ISTR_SOF;
-#if 0
-		if (vsfhal_usbd_callback.on_sof != NULL)
-		{
-			vsfhal_usbd_callback.on_sof(vsfhal_usbd_callback.param);
-		}
-#endif
 	}
 	if (wIstr & USB_ISTR_ESOF)
 	{
+		vsfhal_usbd_cb(VSFHAL_USBD_ON_ERROR, USBERR_SOF_TO);
 		*ISTR = ~USB_ISTR_ESOF;
-#if 0
-		if (vsfhal_usbd_callback.on_error != NULL)
-		{
-			vsfhal_usbd_callback.on_error(vsfhal_usbd_callback.param,
-											USBERR_SOF_TO);
-		}
-#endif
 	}
 	if (wIstr & USB_ISTR_CTR)
 	{

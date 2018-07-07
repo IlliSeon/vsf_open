@@ -225,10 +225,10 @@ struct usrapp_t usrapp =
 	.usbd.cdc.param.line_coding.stopbittype	= 0,
 	.usbd.cdc.param.line_coding.paritytype	= 0,
 	.usbd.cdc.param.line_coding.datatype	= 8,
-	.usbd.cdc.stream_tx.stream.op			= &fifostream_op,
+	.usbd.cdc.stream_tx.stream.op			= &vsf_fifostream_op,
 	.usbd.cdc.stream_tx.mem.buffer.buffer	= (uint8_t *)&usrapp.usbd.cdc.txbuff,
 	.usbd.cdc.stream_tx.mem.buffer.size		= sizeof(usrapp.usbd.cdc.txbuff),
-	.usbd.cdc.stream_rx.stream.op			= &fifostream_op,
+	.usbd.cdc.stream_rx.stream.op			= &vsf_fifostream_op,
 	.usbd.cdc.stream_rx.mem.buffer.buffer	= (uint8_t *)&usrapp.usbd.cdc.rxbuff,
 	.usbd.cdc.stream_rx.mem.buffer.size		= sizeof(usrapp.usbd.cdc.rxbuff),
 	.usbd.ifaces[0].class_protocol			= (struct vsfusbd_class_protocol_t *)&vsfusbd_CDCACMControl_class,
@@ -261,8 +261,8 @@ static void usrapp_usbd_conn(void *p)
 
 void usrapp_srt_init(struct usrapp_t *app)
 {
-	STREAM_INIT(&app->usbd.cdc.stream_rx);
-	STREAM_INIT(&app->usbd.cdc.stream_tx);
+	VSFSTREAM_INIT(&app->usbd.cdc.stream_rx);
+	VSFSTREAM_INIT(&app->usbd.cdc.stream_tx);
 
 //	vsfdbg_init((struct vsf_stream_t *)&app->usbd.cdc.stream_tx);
 //	usart_stream_init(&app->usart_stream);
