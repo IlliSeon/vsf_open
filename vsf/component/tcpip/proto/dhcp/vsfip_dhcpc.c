@@ -105,6 +105,7 @@ static void vsfip_dhcpc_input(void *param, struct vsfip_buffer_t *buf)
 	case DHCPOP_OFFER:
 		dhcpc->ipaddr.size = 4;
 		dhcpc->ipaddr.addr.s_addr = head->yiaddr;
+		vsfip_buffer_release(buf);
 		vsfsm_post_evt(&dhcpc->sm, VSFIP_DHCP_EVT_SEND_REQUEST);
 		break;
 	case DHCPOP_ACK:
@@ -133,12 +134,13 @@ static void vsfip_dhcpc_input(void *param, struct vsfip_buffer_t *buf)
 			}
 		}
 
+		vsfip_buffer_release(buf);
 		vsfsm_post_evt(&dhcpc->sm, VSFIP_DHCP_EVT_READY);
 		break;
+	default:
+	exit:
+		vsfip_buffer_release(buf);
 	}
-
-exit:
-	vsfip_buffer_release(buf);
 }
 
 static struct vsfsm_state_t *
