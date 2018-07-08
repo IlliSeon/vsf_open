@@ -16,19 +16,18 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-#ifndef __VSFIP_ETH_H_INCLUDED__
-#define __VSFIP_ETH_H_INCLUDED__
 
-#define VSFIP_ETH_HWTYPE				1
-#define VSFIP_ETH_HEADSIZE				14
-#define VSFIP_ETH_ADDRLEN				6
+#ifndef __VSFUSBH_RNDIS_H_INCLUDED__
+#define __VSFUSBH_RNDIS_H_INCLUDED__
 
-#ifndef VSFCFG_EXCLUDE_ETH
-bool vsfip_eth_available(struct vsfip_netif_t *netif,
-	const struct vsfip_ipaddr_t *dest_addr);
-vsf_err_t vsfip_eth_header(struct vsfip_buffer_t *buf,
-	enum vsfip_netif_proto_t proto, const struct vsfip_macaddr_t *dest_addr);
-void vsfip_eth_input(struct vsfip_buffer_t *buf);
-#endif
+extern const struct vsfusbh_class_drv_t vsfusbh_rndis_drv;
 
-#endif		// __VSFIP_ETH_H_INCLUDED__
+struct vsfusbh_rndis_cb_t
+{
+	void *param;
+	void (*on_connect)(void *param, struct vsfip_netif_t *netif);
+	void (*on_disconnect)(void *param, struct vsfip_netif_t *netif);
+};
+extern struct vsfusbh_rndis_cb_t vsfusbh_rndis_cb;
+
+#endif // __VSFUSBH_RNDIS_H_INCLUDED__

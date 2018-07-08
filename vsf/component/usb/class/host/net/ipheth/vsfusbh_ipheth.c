@@ -228,15 +228,15 @@ static vsf_err_t vsfusbh_ipheth_init(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 
 				if (!ipheth->netif.macaddr.size)
 				{
-					ctrlurb->transfer_length = 6;
+					ctrlurb->transfer_length = VSFIP_ETH_ADDRLEN;
 					ctrlurb->pipe = usb_rcvctrlpipe(ctrlurb->hcddev, 0);
 					err = vsfusbh_control_msg(ipheth->usbh, ctrlurb, USB_DIR_IN | USB_TYPE_VENDOR,
 							IPHETH_REQ_GETMAC, 0, ipheth->ifnum);
 					if (err != VSFERR_NONE) goto fail;
 					vsfsm_pt_wfe(pt, VSFSM_EVT_URB_COMPLETE);
-					if ((ctrlurb->status != URB_OK) || (ctrlurb->actual_length != 6)) goto fail;
+					if ((ctrlurb->status != URB_OK) || (ctrlurb->actual_length != VSFIP_ETH_ADDRLEN)) goto fail;
 
-					ipheth->netif.macaddr.size = ctrlurb->actual_length;
+					ipheth->netif.macaddr.size = VSFIP_ETH_ADDRLEN;
 					memcpy(ipheth->netif.macaddr.addr.s_addr_buf, ctrlurb->transfer_buffer,
 							ctrlurb->actual_length);
 					vsfdbg_printf("ipheth: MAC is %02X:%02X:%02X:%02X:%02X:%02X" VSFCFG_DEBUG_LINEEND,

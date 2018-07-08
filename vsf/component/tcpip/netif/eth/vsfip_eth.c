@@ -20,8 +20,8 @@
 
 PACKED_HEAD struct PACKED_MID vsfip_ethhead_t
 {
-	uint8_t dst_addr[6];
-	uint8_t src_addr[6];
+	uint8_t dst_addr[VSFIP_ETH_ADDRLEN];
+	uint8_t src_addr[VSFIP_ETH_ADDRLEN];
 	uint16_t type;
 }; PACKED_TAIL
 

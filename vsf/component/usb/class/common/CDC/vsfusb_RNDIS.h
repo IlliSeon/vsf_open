@@ -24,17 +24,19 @@ enum rndis_ctrlmsg_t
 {
 	RNDIS_PACKET_MSG									= 0x00000001,
 	RNDIS_INITIALIZE_MSG								= 0x00000002,
-	RNDIS_INITIALIZE_CMPLT								= 0x80000002,
 	RNDIS_HALT_MSG										= 0x00000003,
 	RNDIS_QUERY_MSG										= 0x00000004,
-	RNDIS_QUERY_CMPLT									= 0x80000004,
 	RNDIS_SET_MSG										= 0x00000005,
-	RNDIS_SET_CMPLT										= 0x80000005,
 	RNDIS_RESET_MSG										= 0x00000006,
-	RNDIS_RESET_CMPLT									= 0x80000006,
 	RNDIS_INDICATE_STATUS_MSG							= 0x00000007,
 	RNDIS_KEEPALIVE_MSG									= 0x00000008,
-	RNDIS_KEEPALIVE_CMPLT								= 0x80000008,
+
+	RNDIS_COMPLETION									= 0x80000000,
+	RNDIS_INITIALIZE_CMPLT								= RNDIS_COMPLETION | RNDIS_INITIALIZE_MSG,
+	RNDIS_QUERY_CMPLT									= RNDIS_COMPLETION | RNDIS_QUERY_MSG,
+	RNDIS_SET_CMPLT										= RNDIS_COMPLETION | RNDIS_SET_MSG,
+	RNDIS_RESET_CMPLT									= RNDIS_COMPLETION | RNDIS_RESET_MSG,
+	RNDIS_KEEPALIVE_CMPLT								= RNDIS_COMPLETION | RNDIS_KEEPALIVE_MSG,
 };
 
 // OIDs
@@ -421,6 +423,29 @@ struct rndis_keepalive_msg_t
 struct rndis_keepalive_cmplt_t
 {
 	struct rndis_replyhead_t reply;
+};
+
+union rndis_msg_t
+{
+	struct rndis_msghead_t head;
+
+	struct rndis_requesthead_t request;
+	struct rndis_initialize_msg_t init_msg;
+	struct rndis_halt_msg_t halt_msg;
+	struct rndis_query_msg_t query_msg;
+	struct rndis_set_msg_t set_msg;
+	struct rndis_reset_msg_t reset_msg;
+	struct rndis_indicate_status_msg_t status_msg;
+	struct rndis_keepalive_msg_t keepalive_msg;
+
+	struct rndis_replyhead_t reply;
+	struct rndis_initialize_cmplt_t init_cmplt;
+	struct rndis_query_cmplt_t query_cmplt;
+	struct rndis_set_cmplt_t set_cmplt;
+	struct rndis_reset_cmplt_t reset_cmplt;
+	struct rndis_keepalive_cmplt_t keepalive_cmplt;
+
+	uint8_t buf[1];
 };
 
 struct rndis_oobhead_t

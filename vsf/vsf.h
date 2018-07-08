@@ -79,6 +79,7 @@
 #include "component/usb/class/host/MSC/vsfusbh_MSC.h"
 #include "component/usb/class/host/net/ecm/vsfusbh_CDCECM.h"
 #include "component/usb/class/host/net/ipheth/vsfusbh_ipheth.h"
+#include "component/usb/class/host/net/rndis/vsfusbh_RNDIS.h"
 #include "component/usb/class/host/libusb/vsfusbh_libusb.h"
 #include "component/usb/class/host/usblyzer/vsfusbh_USBLyzer.h"
 

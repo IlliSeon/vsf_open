@@ -274,6 +274,19 @@ void vsfsm_pt_entry(struct vsfsm_pt_t *pt);
 			}\
 		}\
 	} while (0)
+#define vsfsm_pt_wfpt_errcode(pt, ptslave, err, code)	\
+	do {\
+		(ptslave)->state = 0;\
+		(ptslave)->sm = (pt)->sm;\
+		vsfsm_pt_entry(pt);\
+		{\
+			vsf_err_t err = (ptslave)->thread(ptslave, evt);\
+			if (err != VSFERR_NONE)\
+			{\
+				code\
+			}\
+		}\
+	} while (0)
 #endif // VSFSM_CFG_PT_EN
 
 #if VSFSM_CFG_THREAD_EN

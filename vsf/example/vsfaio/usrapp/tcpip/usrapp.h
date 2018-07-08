@@ -29,6 +29,7 @@ struct usrapp_t
 	{
 		struct usrapp_net_t ipheth;
 		struct usrapp_net_t ecm;
+		struct usrapp_net_t rndis;
 	} net;
 };
 

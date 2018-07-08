@@ -2281,6 +2281,12 @@
                   <name>$PROJ_DIR$\..\..\..\..\component\usb\class\host\net\ipheth\vsfusbh_ipheth.c</name>
                 </file>
               </group>
+              <group>
+                <name>rndis</name>
+                <file>
+                  <name>$PROJ_DIR$\..\..\..\..\component\usb\class\host\net\rndis\vsfusbh_RNDIS.c</name>
+                </file>
+              </group>
             </group>
             <group>
               <name>usblyzer</name>

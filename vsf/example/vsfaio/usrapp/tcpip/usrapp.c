@@ -357,6 +357,10 @@ void usrapp_srt_init(struct usrapp_t *app)
 	vsfusbh_ecm_cb.on_connect = usrapp_net_on_connect;
 	vsfusbh_ecm_cb.on_disconnect = usrapp_net_on_disconnect;
 	vsfusbh_register_driver(&usrapp.usbh, &vsfusbh_ecm_drv);
+	vsfusbh_rndis_cb.param = &usrapp.net.rndis;
+	vsfusbh_rndis_cb.on_connect = usrapp_net_on_connect;
+	vsfusbh_rndis_cb.on_disconnect = usrapp_net_on_disconnect;
+	vsfusbh_register_driver(&usrapp.usbh, &vsfusbh_rndis_drv);
 
 	VSFSTREAM_INIT(&app->usbd.cdc.stream_rx);
 	VSFSTREAM_INIT(&app->usbd.cdc.stream_tx);

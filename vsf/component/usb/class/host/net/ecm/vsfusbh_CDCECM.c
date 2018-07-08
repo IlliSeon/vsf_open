@@ -144,7 +144,6 @@ static void vsfusbh_ecm_on_event(struct vsfusbh_ecm_t *ecm)
 		{
 			.state = 0,
 			.sm = 0,
-			.user_data = &ecm->netif,
 		};
 
 		if (ecm->connected && (ecm->evt[2] == 0))
@@ -195,11 +194,11 @@ static vsf_err_t vsfusbh_ecm_init_thread(struct vsfsm_pt_t *pt, vsfsm_evt_t evt)
 
 	{
 		char *str = (char *)ecm->ctrl_urb->transfer_buffer + 2;
-		for (int i = 0; i < 6; i++, str += 4)
+		for (int i = 0; i < VSFIP_ETH_ADDRLEN; i++, str += 4)
 			ecm->netif.macaddr.addr.s_addr_buf[i] = (hex_to_bin(str[0]) << 4) | (hex_to_bin(str[2]) << 0);
 	}
 	vsfusbh_free_urb_buffer(ecm->ctrl_urb);
-	ecm->netif.macaddr.size = 6;
+	ecm->netif.macaddr.size = VSFIP_ETH_ADDRLEN;
 	vsfdbg_printf("cdc_ecm: MAC is %02X:%02X:%02X:%02X:%02X:%02X" VSFCFG_DEBUG_LINEEND,
 		ecm->netif.macaddr.addr.s_addr_buf[0], ecm->netif.macaddr.addr.s_addr_buf[1],
 		ecm->netif.macaddr.addr.s_addr_buf[2], ecm->netif.macaddr.addr.s_addr_buf[3],
@@ -326,7 +325,7 @@ static void vsfusbh_ecm_netdrv_free(struct vsfip_netif_t *netif)
 static struct vsfip_netdrv_op_t vsfusbh_ecm_netdrv_op =
 {
 	vsfusbh_ecm_netdrv_init, vsfusbh_ecm_netdrv_fini, vsfusbh_ecm_netdrv_free,
-	vsfip_eth_header
+	vsfip_eth_header, vsfip_eth_available
 };
 
 static void *vsfusbh_ecm_probe(struct vsfusbh_t *usbh,
