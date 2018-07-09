@@ -26,6 +26,7 @@
 #include "std/vsfvm_ext_std.h"
 #include "vsfvm_ext_vsfusbh.h"
 
+#ifdef VSFHAL_HAS_USBH
 #ifdef VSFVM_VM
 static struct vsfsm_state_t *
 vsfvm_ext_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
@@ -289,3 +290,4 @@ const struct vsfvm_ext_op_t vsfvm_ext_vsfusbh =
 #endif
 	.func_num = dimof(vsfvm_ext_func),
 };
+#endif		// VSFHAL_HAS_USBH

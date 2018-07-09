@@ -12,18 +12,23 @@ static struct vsfvmc_func_t *vsfvmc_get_rootfunc(struct vsfvmc_script_t *script)
 		return &script->cur_func;
 }
 
+static int vsfvmc_set_bytecode(struct vsfvmc_t *vsfvmc, uint32_t code, int offset)
+{
+	return vsfvmc->cb.set_bytecode(vsfvmc->cb.param, code, offset);
+}
+
+static uint32_t vsfvmc_get_bytecode(struct vsfvmc_t *vsfvmc, int offset)
+{
+	return vsfvmc->cb.get_bytecode(vsfvmc->cb.param, offset);
+}
+
 static int vsfvmc_push_bytecode(struct vsfvmc_t *vsfvmc, uint32_t code)
 {
 #ifdef VSFVM_COMPILER_DEBUG
-	VSFVM_LOG_INFO("%d:", vsfvmc->bytecode.sp);
+	VSFVM_LOG_INFO("%d:", vsfvmc->bytecode_pos);
 	vsfvm_tkdump(code);
 #endif
-	return vsf_dynstack_push(&vsfvmc->bytecode, &code, 1);
-}
-
-static uint32_t *vsfvmc_get_bytecode(struct vsfvmc_t *vsfvmc, int offset)
-{
-	return vsf_dynarr_get(&vsfvmc->bytecode.var, offset);
+	return vsfvmc_set_bytecode(vsfvmc, code, vsfvmc->bytecode_pos++);
 }
 
 static int vsfvmc_add_res(struct vsfvmc_func_t *func,
@@ -74,18 +79,18 @@ local_var:
 	return -VSFVMC_BUG;
 }
 
-static int vsfvmc_push_res(struct vsfvmc_t *vsfvmc,
-	struct vsfvmc_func_t *func)
+static int vsfvmc_push_res(struct vsfvmc_t *vsfvmc, struct vsfvmc_func_t *func)
 {
 	struct vsfvmc_linktbl_t *linktbl = vsf_dynstack_pop(&func->linktbl, 1);
 	uint32_t len, token_num, *ptr32;
-	uint32_t *ptoken;
+	uint32_t fixtoken;
 	uint32_t goto_anchor;
 
 	if (linktbl != NULL)
 	{
-		goto_anchor = vsfvmc->bytecode.sp;
-		vsfvmc_push_bytecode(vsfvmc, VSFVM_KEYWORD(VSFVM_CODE_KEYWORD_goto, 0, 0));
+		goto_anchor = vsfvmc->bytecode_pos;
+		if (vsfvmc_push_bytecode(vsfvmc, VSFVM_KEYWORD(VSFVM_CODE_KEYWORD_goto, 0, 0xFFFF)) < 0)
+			return -VSFVMC_BYTECODE_TOOLONG;
 
 		while (linktbl != NULL)
 		{
@@ -99,20 +104,24 @@ static int vsfvmc_push_res(struct vsfvmc_t *vsfvmc,
 				return -VSFVMC_BUG;
 			}
 
-			ptoken = vsfvmc_get_bytecode(vsfvmc, linktbl->bytecode_pos);
-			*ptoken |= (uint16_t)(vsfvmc->bytecode.sp - linktbl->bytecode_pos - 1);
+			fixtoken = vsfvmc_get_bytecode(vsfvmc, linktbl->bytecode_pos) & ~0xFFFF;
+			fixtoken |= (uint16_t)(vsfvmc->bytecode_pos - linktbl->bytecode_pos - 1);
+			vsfvmc_set_bytecode(vsfvmc, fixtoken, linktbl->bytecode_pos);
 
-			vsfvmc_push_bytecode(vsfvmc,
-				VSFVM_VARIABLE(VSFVM_CODE_VARIABLE_RESOURCES, 0, len));
+			if (vsfvmc_push_bytecode(vsfvmc,
+					VSFVM_VARIABLE(VSFVM_CODE_VARIABLE_RESOURCES, 0, len)) < 0)
+				return -VSFVMC_BYTECODE_TOOLONG;
 			ptr32 = (uint32_t *)linktbl->sym->name;
 			for (len = 0; len < token_num; len++)
-				vsfvmc_push_bytecode(vsfvmc, *ptr32++);
+				if (vsfvmc_push_bytecode(vsfvmc, *ptr32++) < 0)
+					return -VSFVMC_BYTECODE_TOOLONG;
 
 			linktbl = vsf_dynstack_pop(&func->linktbl, 1);
 		}
 
-		ptoken = vsfvmc_get_bytecode(vsfvmc, goto_anchor);
-		*ptoken |= (int16_t)(vsfvmc->bytecode.sp - goto_anchor - 1);
+		fixtoken = vsfvmc_get_bytecode(vsfvmc, goto_anchor) & ~0xFFFF;
+		fixtoken |= (int16_t)(vsfvmc->bytecode_pos - goto_anchor - 1);
+		vsfvmc_set_bytecode(vsfvmc, fixtoken, goto_anchor);
 	}
 	return 0;
 }
@@ -142,36 +151,41 @@ static int vsfvmc_push_expr(struct vsfvmc_t *vsfvmc,
 		case VSFVMC_TOKEN_NUM:
 			if (data->ival & (0xFFFFFFFF << VSFVM_CODE_LENGTH))
 			{
-				vsfvmc_push_bytecode(vsfvmc, VSFVM_NUMBER(data->ival >> (32 - VSFVM_CODE_LENGTH)));
-				vsfvmc_push_bytecode(vsfvmc, VSFVM_NUMBER(32 - VSFVM_CODE_LENGTH));
-				vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_SHL, 0, 0));
-				vsfvmc_push_bytecode(vsfvmc, VSFVM_NUMBER(data->ival & ((1 << (32 - VSFVM_CODE_LENGTH)) - 1)));
-				vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_ADD, 0, 0));
+				if ((vsfvmc_push_bytecode(vsfvmc, VSFVM_NUMBER(data->ival >> (32 - VSFVM_CODE_LENGTH))) < 0) ||
+					(vsfvmc_push_bytecode(vsfvmc, VSFVM_NUMBER(32 - VSFVM_CODE_LENGTH)) < 0) ||
+					(vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_SHL, 0, 0)) < 0) ||
+					(vsfvmc_push_bytecode(vsfvmc, VSFVM_NUMBER(data->ival & ((1 << (32 - VSFVM_CODE_LENGTH)) - 1))) < 0) ||
+					(vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_ADD, 0, 0)) < 0))
+					return -VSFVMC_BYTECODE_TOOLONG;
 			}
-			else
-				vsfvmc_push_bytecode(vsfvmc, VSFVM_NUMBER(data->ival));
+			else if (vsfvmc_push_bytecode(vsfvmc, VSFVM_NUMBER(data->ival)) < 0)
+				return -VSFVMC_BYTECODE_TOOLONG;
 			break;
 		case VSFVMC_TOKEN_RESOURCES:
-			linktbl.bytecode_pos = vsfvmc->bytecode.sp;
+			linktbl.bytecode_pos = vsfvmc->bytecode_pos;
 			linktbl.sym = etoken->data.sym;
 			linktbl.type = VSFVMC_LINKTBL_STR;
 			if (vsfvmc_add_res(func, &linktbl))
 				return -VSFVMC_NOT_ENOUGH_RESOURCES;
-			vsfvmc_push_bytecode(vsfvmc, VSFVM_VARIABLE(VSFVM_CODE_VARIABLE_RESOURCES, 0, 0));
+			if (vsfvmc_push_bytecode(vsfvmc, VSFVM_VARIABLE(VSFVM_CODE_VARIABLE_RESOURCES, 0, 0xFFFF)) < 0)
+				return -VSFVMC_BYTECODE_TOOLONG;
 			break;
 		case VSFVMC_TOKEN_VAR_ID:
 			if (vsfvmc_get_var(vsfvmc, script, func, data->sym, &arg8, &arg16))
 				return -VSFVMC_PARSER_INVALID_EXPR;
-			vsfvmc_push_bytecode(vsfvmc, VSFVM_VARIABLE(VSFVM_CODE_VARIABLE_NORMAL, arg8, arg16));
+			if (vsfvmc_push_bytecode(vsfvmc, VSFVM_VARIABLE(VSFVM_CODE_VARIABLE_NORMAL, arg8, arg16)) < 0)
+				return -VSFVMC_BYTECODE_TOOLONG;
 			break;
 		case VSFVMC_TOKEN_VAR_ID_REF:
 			if (vsfvmc_get_var(vsfvmc, script, func, data->sym, &arg8, &arg16))
 				return -VSFVMC_PARSER_INVALID_EXPR;
-			vsfvmc_push_bytecode(vsfvmc, VSFVM_VARIABLE(VSFVM_CODE_VARIABLE_REFERENCE, arg8, arg16));
+			if (vsfvmc_push_bytecode(vsfvmc, VSFVM_VARIABLE(VSFVM_CODE_VARIABLE_REFERENCE, arg8, arg16)) < 0)
+				return -VSFVMC_BYTECODE_TOOLONG;
 			break;
 		case VSFVMC_TOKEN_FUNC_ID:
-			vsfvmc_push_bytecode(vsfvmc, VSFVM_VARIABLE(VSFVM_CODE_VARIABLE_FUNCTION,
-				data->sym->func.param_num, data->sym->func.pos - vsfvmc->bytecode.sp - 1));
+			if (vsfvmc_push_bytecode(vsfvmc, VSFVM_VARIABLE(VSFVM_CODE_VARIABLE_FUNCTION,
+					data->sym->func.param_num, data->sym->func.pos - vsfvmc->bytecode_pos - 1)) < 0)
+				return -VSFVMC_BYTECODE_TOOLONG;
 			break;
 		case VSFVMC_TOKEN_FUNC_CALL:
 			if ((data->sym->func.param_num >= 0) &&
@@ -182,11 +196,14 @@ static int vsfvmc_push_expr(struct vsfvmc_t *vsfvmc,
 			if (data->sym->type == VSFVMC_LEXER_SYM_FUNCTION)
 			{
 				if (!strcmp(data->sym->name, "thread"))
-					vsfvmc_push_bytecode(vsfvmc, VSFVM_FUNCTION(VSFVM_CODE_FUNCTION_THREAD,
-						token_param, 0));
-				else
-					vsfvmc_push_bytecode(vsfvmc, VSFVM_FUNCTION(VSFVM_CODE_FUNCTION_SCRIPT,
-						token_param, data->sym->func.pos - vsfvmc->bytecode.sp - 1));
+				{
+					if (vsfvmc_push_bytecode(vsfvmc, VSFVM_FUNCTION(VSFVM_CODE_FUNCTION_THREAD,
+							token_param, 0)) < 0)
+						return -VSFVMC_BYTECODE_TOOLONG;
+				}
+				else if (vsfvmc_push_bytecode(vsfvmc, VSFVM_FUNCTION(VSFVM_CODE_FUNCTION_SCRIPT,
+						token_param, data->sym->func.pos - vsfvmc->bytecode_pos - 1)) < 0)
+					return -VSFVMC_BYTECODE_TOOLONG;
 			}
 			else if (data->sym->type == VSFVMC_LEXER_SYM_EXTFUNC)
 			{
@@ -199,8 +216,9 @@ static int vsfvmc_push_expr(struct vsfvmc_t *vsfvmc,
 						break;
 					}
 				}
-				vsfvmc_push_bytecode(vsfvmc, VSFVM_FUNCTION(VSFVM_CODE_FUNCTION_EXT,
-					token_param, ext->func_id + data->sym->func.pos));
+				if (vsfvmc_push_bytecode(vsfvmc, VSFVM_FUNCTION(VSFVM_CODE_FUNCTION_EXT,
+						token_param, ext->func_id + data->sym->func.pos)) < 0)
+					return -VSFVMC_BYTECODE_TOOLONG;
 			}
 			else
 				return -VSFVMC_COMPILER_INVALID_FUNC;
@@ -208,43 +226,49 @@ static int vsfvmc_push_expr(struct vsfvmc_t *vsfvmc,
 		default:
 			if (token > VSFVMC_TOKEN_BINARY_OP)
 			{
+				int ret;
 				switch (token)
 				{
-				case VSFVMC_TOKEN_MUL:		vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_MUL, 0, 0));	break;
-				case VSFVMC_TOKEN_DIV:		vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_DIV, 0, 0));	break;
-				case VSFVMC_TOKEN_MOD:		vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_MOD, 0, 0));	break;
-				case VSFVMC_TOKEN_ADD:		vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_ADD, 0, 0));	break;
-				case VSFVMC_TOKEN_SUB:		vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_SUB, 0, 0));	break;
-				case VSFVMC_TOKEN_SHL:		vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_SHL, 0, 0));	break;
-				case VSFVMC_TOKEN_SHR:		vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_SHR, 0, 0));	break;
-				case VSFVMC_TOKEN_LT:		vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_LT, 0, 0));		break;
-				case VSFVMC_TOKEN_LE:		vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_LE, 0, 0));		break;
-				case VSFVMC_TOKEN_GT:		vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_GT, 0, 0));		break;
-				case VSFVMC_TOKEN_GE:		vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_GE, 0, 0));		break;
-				case VSFVMC_TOKEN_EQ:		vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_EQ, 0, 0));		break;
-				case VSFVMC_TOKEN_NE:		vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_NE, 0, 0));		break;
-				case VSFVMC_TOKEN_AND:		vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_AND, 0, 0));	break;
-				case VSFVMC_TOKEN_XOR:		vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_XOR, 0, 0));	break;
-				case VSFVMC_TOKEN_OR:		vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_OR, 0, 0));		break;
-				case VSFVMC_TOKEN_LAND:		vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_LAND, 0, 0));	break;
-				case VSFVMC_TOKEN_LOR:		vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_LOR, 0, 0));	break;
-				case VSFVMC_TOKEN_ASSIGN:	vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_ASSIGN, 0, 0));	break;
-				case VSFVMC_TOKEN_COMMA_OP:	vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_COMMA, 0, 0));	break;
+				case VSFVMC_TOKEN_MUL:		ret = vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_MUL, 0, 0));	break;
+				case VSFVMC_TOKEN_DIV:		ret = vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_DIV, 0, 0));	break;
+				case VSFVMC_TOKEN_MOD:		ret = vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_MOD, 0, 0));	break;
+				case VSFVMC_TOKEN_ADD:		ret = vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_ADD, 0, 0));	break;
+				case VSFVMC_TOKEN_SUB:		ret = vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_SUB, 0, 0));	break;
+				case VSFVMC_TOKEN_SHL:		ret = vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_SHL, 0, 0));	break;
+				case VSFVMC_TOKEN_SHR:		ret = vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_SHR, 0, 0));	break;
+				case VSFVMC_TOKEN_LT:		ret = vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_LT, 0, 0));	break;
+				case VSFVMC_TOKEN_LE:		ret = vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_LE, 0, 0));	break;
+				case VSFVMC_TOKEN_GT:		ret = vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_GT, 0, 0));	break;
+				case VSFVMC_TOKEN_GE:		ret = vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_GE, 0, 0));	break;
+				case VSFVMC_TOKEN_EQ:		ret = vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_EQ, 0, 0));	break;
+				case VSFVMC_TOKEN_NE:		ret = vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_NE, 0, 0));	break;
+				case VSFVMC_TOKEN_AND:		ret = vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_AND, 0, 0));	break;
+				case VSFVMC_TOKEN_XOR:		ret = vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_XOR, 0, 0));	break;
+				case VSFVMC_TOKEN_OR:		ret = vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_OR, 0, 0));	break;
+				case VSFVMC_TOKEN_LAND:		ret = vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_LAND, 0, 0));	break;
+				case VSFVMC_TOKEN_LOR:		ret = vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_LOR, 0, 0));	break;
+				case VSFVMC_TOKEN_ASSIGN:	ret = vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_ASSIGN, 0, 0));break;
+				case VSFVMC_TOKEN_COMMA_OP:	ret = vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_COMMA, 0, 0));break;
 				default:
 					return -VSFVMC_NOT_SUPPORT;
 				}
+				if (ret < 0)
+					return -VSFVMC_BYTECODE_TOOLONG;
 			}
 			else if (token > VSFVMC_TOKEN_UNARY_OP)
 			{
+				int ret;
 				switch (token)
 				{
-				case VSFVMC_TOKEN_NOT:		vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_NOT, 0, 0));	break;
-				case VSFVMC_TOKEN_REV:		vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_REV, 0, 0));	break;
-				case VSFVMC_TOKEN_NEGA:		vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_NEGA, 0, 0));	break;
-				case VSFVMC_TOKEN_POSI:		vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_POSI, 0, 0));	break;
+				case VSFVMC_TOKEN_NOT:		ret = vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_NOT, 0, 0));	break;
+				case VSFVMC_TOKEN_REV:		ret = vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_REV, 0, 0));	break;
+				case VSFVMC_TOKEN_NEGA:		ret = vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_NEGA, 0, 0));	break;
+				case VSFVMC_TOKEN_POSI:		ret = vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_POSI, 0, 0));	break;
 				default:
 					return -VSFVMC_NOT_SUPPORT;
 				}
+				if (ret < 0)
+					return -VSFVMC_BYTECODE_TOOLONG;
 			}
 			else
 			{
@@ -411,7 +435,7 @@ static vsf_err_t vsfvmc_parse_stmt(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 	struct vsfvmc_func_t *func = &script->cur_func;
 	struct vsfvmc_func_ctx_t *ctx = &func->curctx;
 	struct vsf_dynstack_t *stack_exp = &lexer->expr.stack_exp;
-	uint32_t *ptoken;
+	uint32_t fixtoken;
 	int err;
 	bool token_unprocessed = false;
 
@@ -451,7 +475,8 @@ static vsf_err_t vsfvmc_parse_stmt(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 				VSFVM_LOG_INFO("parser: func %s end" VSFVM_LOG_LINEEND,
 					func->name->name);
 #endif
-				vsfvmc_push_bytecode(vsfvmc, VSFVM_KEYWORD(VSFVM_CODE_KEYWORD_return, 0, 0));
+				if (vsfvmc_push_bytecode(vsfvmc, VSFVM_KEYWORD(VSFVM_CODE_KEYWORD_return, 0, 0)) < 0)
+					return -VSFVMC_BYTECODE_TOOLONG;
 
 				vsfvmc_func_fini(func);
 				func = vsf_dynstack_pop(&script->func_stack, 1);
@@ -464,8 +489,9 @@ static vsf_err_t vsfvmc_parse_stmt(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 				{
 					if (ctx->func_ctx.goto_anchor >= 0)
 					{
-						ptoken = vsfvmc_get_bytecode(vsfvmc, ctx->func_ctx.goto_anchor);
-						*ptoken |= (int16_t)(vsfvmc->bytecode.sp - ctx->func_ctx.goto_anchor - 1);
+						fixtoken = vsfvmc_get_bytecode(vsfvmc, ctx->func_ctx.goto_anchor) & ~0xFFFF;
+						fixtoken |= (int16_t)(vsfvmc->bytecode_pos - ctx->func_ctx.goto_anchor - 1);
+						vsfvmc_set_bytecode(vsfvmc, fixtoken, ctx->func_ctx.goto_anchor);
 					}
 					ctx = vsfvmc_func_pop_ctx(func);
 				}
@@ -476,7 +502,8 @@ static vsf_err_t vsfvmc_parse_stmt(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 				{
 					struct vsflist_t *list, *next;
 
-					vsfvmc_push_bytecode(vsfvmc, VSFVM_KEYWORD(VSFVM_CODE_KEYWORD_goto, data->uval, 0));
+					if (vsfvmc_push_bytecode(vsfvmc, VSFVM_KEYWORD(VSFVM_CODE_KEYWORD_goto, data->uval, 0)) < 0)
+						return -VSFVMC_BYTECODE_TOOLONG;
 					while (data->uval--)
 					{
 						list = &func->varlist;
@@ -500,8 +527,9 @@ static vsf_err_t vsfvmc_parse_stmt(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 						if (token != VSFVMC_TOKEN_ELSE)
 						{
 							token_unprocessed = true;
-							ptoken = vsfvmc_get_bytecode(vsfvmc, ctx->if_ctx.if_anchor);
-							*ptoken |= (int16_t)(vsfvmc->bytecode.sp - ctx->if_ctx.if_anchor - 1);
+							fixtoken = vsfvmc_get_bytecode(vsfvmc, ctx->if_ctx.if_anchor) & ~0xFFFF;
+							fixtoken |= (int16_t)(vsfvmc->bytecode_pos - ctx->if_ctx.if_anchor - 1);
+							vsfvmc_set_bytecode(vsfvmc, fixtoken, ctx->if_ctx.if_anchor);
 
 							ctx = vsfvmc_func_pop_ctx(func);
 							if ((ctx->etoken.token > 0) &&
@@ -513,16 +541,19 @@ static vsf_err_t vsfvmc_parse_stmt(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 						else
 						{
 							ctx->etoken.token = VSFVMC_TOKEN_ELSE;
-							ctx->if_ctx.else_anchor = vsfvmc->bytecode.sp;
-							vsfvmc_push_bytecode(vsfvmc, VSFVM_KEYWORD(VSFVM_CODE_KEYWORD_goto, 0, 0));
-							ptoken = vsfvmc_get_bytecode(vsfvmc, ctx->if_ctx.if_anchor);
-							*ptoken |= (int16_t)(vsfvmc->bytecode.sp - ctx->if_ctx.if_anchor - 1);
+							ctx->if_ctx.else_anchor = vsfvmc->bytecode_pos;
+							if (vsfvmc_push_bytecode(vsfvmc, VSFVM_KEYWORD(VSFVM_CODE_KEYWORD_goto, 0, 0xFFFF)) < 0)
+								return -VSFVMC_BYTECODE_TOOLONG;
+							fixtoken = vsfvmc_get_bytecode(vsfvmc, ctx->if_ctx.if_anchor) & ~0xFFFF;
+							fixtoken |= (int16_t)(vsfvmc->bytecode_pos - ctx->if_ctx.if_anchor - 1);
+							vsfvmc_set_bytecode(vsfvmc, fixtoken, ctx->if_ctx.if_anchor);
 						}
 					}
 					else if (ctx->etoken.token == VSFVMC_TOKEN_ELSE)
 					{
-						ptoken = vsfvmc_get_bytecode(vsfvmc, ctx->if_ctx.else_anchor);
-						*ptoken |= (int16_t)(vsfvmc->bytecode.sp - ctx->if_ctx.else_anchor - 1);
+						fixtoken = vsfvmc_get_bytecode(vsfvmc, ctx->if_ctx.else_anchor) & ~0xFFFF;
+						fixtoken |= (int16_t)(vsfvmc->bytecode_pos - ctx->if_ctx.else_anchor - 1);
+						vsfvmc_set_bytecode(vsfvmc, fixtoken, ctx->if_ctx.else_anchor);
 
 						ctx = vsfvmc_func_pop_ctx(func);
 						if ((ctx->etoken.token > 0) &&
@@ -533,10 +564,12 @@ static vsf_err_t vsfvmc_parse_stmt(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 					}
 					else if (ctx->etoken.token == VSFVMC_TOKEN_WHILE)
 					{
-						vsfvmc_push_bytecode(vsfvmc, VSFVM_KEYWORD(VSFVM_CODE_KEYWORD_goto, 0,
-							(int16_t)(ctx->while_ctx.calc_anchor - vsfvmc->bytecode.sp - 1)));
-						ptoken = vsfvmc_get_bytecode(vsfvmc, ctx->while_ctx.if_anchor);
-						*ptoken |= (int16_t)(vsfvmc->bytecode.sp - ctx->while_ctx.if_anchor - 1);
+						if (vsfvmc_push_bytecode(vsfvmc, VSFVM_KEYWORD(VSFVM_CODE_KEYWORD_goto, 0,
+								(int16_t)(ctx->while_ctx.calc_anchor - vsfvmc->bytecode_pos - 1))) < 0)
+							return -VSFVMC_BYTECODE_TOOLONG;
+						fixtoken = vsfvmc_get_bytecode(vsfvmc, ctx->while_ctx.if_anchor) & ~0xFFFF;
+						fixtoken |= (int16_t)(vsfvmc->bytecode_pos - ctx->while_ctx.if_anchor - 1);
+						vsfvmc_set_bytecode(vsfvmc, fixtoken, ctx->while_ctx.if_anchor);
 						ctx = vsfvmc_func_pop_ctx(func);
 
 						if ((ctx->etoken.token > 0) &&
@@ -608,7 +641,8 @@ static vsf_err_t vsfvmc_parse_stmt(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 			}
 
 			vsflist_append(&func->varlist, &data->sym->list);
-			vsfvmc_push_bytecode(vsfvmc, VSFVM_KEYWORD(VSFVM_CODE_KEYWORD_var, VSFVM_CODE_VAR_I32, 0));
+			if (vsfvmc_push_bytecode(vsfvmc, VSFVM_KEYWORD(VSFVM_CODE_KEYWORD_var, VSFVM_CODE_VAR_I32, 0)) < 0)
+				return -VSFVMC_BYTECODE_TOOLONG;
 			if (stack_exp->sp)
 			{
 				uint8_t pos;
@@ -616,12 +650,15 @@ static vsf_err_t vsfvmc_parse_stmt(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 
 				if (vsfvmc_get_var(vsfvmc, script, func, data->sym, &pos, &idx))
 					return -VSFVMC_BUG;
-				vsfvmc_push_bytecode(vsfvmc, VSFVM_VARIABLE(VSFVM_CODE_VARIABLE_REFERENCE, pos, idx));
+				if (vsfvmc_push_bytecode(vsfvmc, VSFVM_VARIABLE(VSFVM_CODE_VARIABLE_REFERENCE, pos, idx)) < 0)
+					return -VSFVMC_BYTECODE_TOOLONG;
 				err = vsfvmc_push_expr(vsfvmc, stack_exp);
 				if (err) return err;
-				vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_ASSIGN, 0, 0));
-				vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_SEMICOLON, 0, 0));
-				vsfvmc_push_res(vsfvmc, func);
+				if ((vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_ASSIGN, 0, 0)) < 0) ||
+					(vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_SEMICOLON, 0, 0)) < 0))
+					return -VSFVMC_BYTECODE_TOOLONG;
+				err = vsfvmc_push_res(vsfvmc, func);
+				if (err) return err;
 			}
 		}
 		else if (token == VSFVMC_TOKEN_CONST)
@@ -640,13 +677,14 @@ static vsf_err_t vsfvmc_parse_stmt(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 
 			if (func->name)
 			{
-				ctx->func_ctx.goto_anchor = vsfvmc->bytecode.sp;
-				vsfvmc_push_bytecode(vsfvmc, VSFVM_KEYWORD(VSFVM_CODE_KEYWORD_goto, 0, 0));
+				ctx->func_ctx.goto_anchor = vsfvmc->bytecode_pos;
+				if (vsfvmc_push_bytecode(vsfvmc, VSFVM_KEYWORD(VSFVM_CODE_KEYWORD_goto, 0, 0xFFFF)) < 0)
+					return -VSFVMC_BYTECODE_TOOLONG;
 			}
 			else
 				ctx->func_ctx.goto_anchor = -1;
 
-			data->sym->func.pos = vsfvmc->bytecode.sp;
+			data->sym->func.pos = vsfvmc->bytecode_pos;
 			vsfvmc_script_func(script, data->sym);
 			func = &script->cur_func;
 
@@ -680,15 +718,19 @@ static vsf_err_t vsfvmc_parse_stmt(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 			ctx->block_level = func->block_level;
 
 		push_if:
-			vsfvmc_push_bytecode(vsfvmc, VSFVM_KEYWORD(VSFVM_CODE_KEYWORD_var, VSFVM_CODE_VAR_I32, 0));
-			vsfvmc_push_bytecode(vsfvmc, VSFVM_VARIABLE(VSFVM_CODE_VARIABLE_REFERENCE, VSFVM_CODE_VARIABLE_POS_STACK_END, 0));
+			if ((vsfvmc_push_bytecode(vsfvmc, VSFVM_KEYWORD(VSFVM_CODE_KEYWORD_var, VSFVM_CODE_VAR_I32, 0)) < 0) ||
+				(vsfvmc_push_bytecode(vsfvmc, VSFVM_VARIABLE(VSFVM_CODE_VARIABLE_REFERENCE, VSFVM_CODE_VARIABLE_POS_STACK_END, 0)) < 0))
+				return -VSFVMC_BYTECODE_TOOLONG;
 			err = vsfvmc_push_expr(vsfvmc, stack_exp);
 			if (err) return err;
-			vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_ASSIGN, 0, 0));
-			vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_SEMICOLON, 0, 0));
-			vsfvmc_push_res(vsfvmc, func);
-			ctx->if_ctx.if_anchor = vsfvmc->bytecode.sp;
-			vsfvmc_push_bytecode(vsfvmc, VSFVM_KEYWORD(VSFVM_CODE_KEYWORD_if, 0, 0));
+			if ((vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_ASSIGN, 0, 0)) < 0) ||
+				(vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_SEMICOLON, 0, 0)) < 0))
+				return -VSFVMC_BYTECODE_TOOLONG;
+			err = vsfvmc_push_res(vsfvmc, func);
+			if (err) return err;
+			ctx->if_ctx.if_anchor = vsfvmc->bytecode_pos;
+			if (vsfvmc_push_bytecode(vsfvmc, VSFVM_KEYWORD(VSFVM_CODE_KEYWORD_if, 0, 0xFFFF)) < 0)
+				return -VSFVMC_BYTECODE_TOOLONG;
 		}
 		else if (token == VSFVMC_TOKEN_WHILE)
 		{
@@ -701,7 +743,7 @@ static vsf_err_t vsfvmc_parse_stmt(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 			ctx = &func->curctx;
 			ctx->etoken.token = token;
 			ctx->block_level = func->block_level;
-			ctx->while_ctx.calc_anchor = vsfvmc->bytecode.sp;
+			ctx->while_ctx.calc_anchor = vsfvmc->bytecode_pos;
 			goto push_if;
 		}
 		else if (token == VSFVMC_TOKEN_RET)
@@ -713,14 +755,18 @@ static vsf_err_t vsfvmc_parse_stmt(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 
 			if (stack_exp->sp)
 			{
-				vsfvmc_push_bytecode(vsfvmc, VSFVM_VARIABLE(VSFVM_CODE_VARIABLE_REFERENCE_NOTRACE, VSFVM_CODE_VARIABLE_POS_FUNCARG, 0));
+				if (vsfvmc_push_bytecode(vsfvmc, VSFVM_VARIABLE(VSFVM_CODE_VARIABLE_REFERENCE_NOTRACE, VSFVM_CODE_VARIABLE_POS_FUNCARG, 0)) < 0)
+					return -VSFVMC_BYTECODE_TOOLONG;
 				err = vsfvmc_push_expr(vsfvmc, stack_exp);
 				if (err) return err;
-				vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_ASSIGN, 0, 0));
-				vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_SEMICOLON, 0, 0));
-				vsfvmc_push_res(vsfvmc, func);
+				if ((vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_ASSIGN, 0, 0)) < 0) ||
+					(vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_SEMICOLON, 0, 0)) < 0))
+					return -VSFVMC_BYTECODE_TOOLONG;
+				err = vsfvmc_push_res(vsfvmc, func);
+				if (err) return err;
 			}
-			vsfvmc_push_bytecode(vsfvmc, VSFVM_KEYWORD(VSFVM_CODE_KEYWORD_return, 0, 0));
+			if (vsfvmc_push_bytecode(vsfvmc, VSFVM_KEYWORD(VSFVM_CODE_KEYWORD_return, 0, 0)) < 0)
+				return -VSFVMC_BYTECODE_TOOLONG;
 		}
 		else if (token == VSFVMC_TOKEN_EXPR)
 		{
@@ -731,8 +777,10 @@ static vsf_err_t vsfvmc_parse_stmt(struct vsfsm_pt_t *pt, vsfsm_evt_t evt,
 
 			err = vsfvmc_push_expr(vsfvmc, stack_exp);
 			if (err) return err;
-			vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_SEMICOLON, 0, 0));
-			vsfvmc_push_res(vsfvmc, func);
+			if (vsfvmc_push_bytecode(vsfvmc, VSFVM_SYMBOL(VSFVM_CODE_SYMBOL_SEMICOLON, 0, 0)) < 0)
+				return -VSFVMC_BYTECODE_TOOLONG;
+			err = vsfvmc_push_res(vsfvmc, func);
+			if (err) return err;
 		}
 		else
 			return -VSFVMC_NOT_SUPPORT;
@@ -781,17 +829,19 @@ static void vsfvmc_script_fini(struct vsfvmc_t *vsfvmc);
 void vsfvmc_fini(struct vsfvmc_t *vsfvmc)
 {
 	vsfvmc_script_fini(vsfvmc);
-	vsf_dynstack_fini(&vsfvmc->bytecode);
 	vsfvm_free_extlist(&vsfvmc->ext);
 }
 
 int vsfvmc_init(struct vsfvmc_t *vsfvmc, void *param,
-	require_usrlib_t require_lib)
+	require_usrlib_t require_lib, set_bytecode_t set_bytecode,
+	get_bytecode_t get_bytecode)
 {
 	memset(vsfvmc, 0, sizeof(*vsfvmc));
 	vsfvmc->cb.param = param;
 	vsfvmc->cb.require_lib = require_lib;
-	vsf_dynstack_init(&vsfvmc->bytecode, sizeof(uint32_t), 8, 4);
+	vsfvmc->cb.set_bytecode = set_bytecode;
+	vsfvmc->cb.get_bytecode = get_bytecode;
+	vsfvmc->bytecode_pos = 0;
 	return 0;
 }
 

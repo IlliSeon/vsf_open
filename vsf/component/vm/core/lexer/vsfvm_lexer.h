@@ -146,7 +146,7 @@ struct vsfvmc_lexer_op_t
 
 struct vsfvmc_lexer_list_t
 {
-	struct vsfvmc_lexer_op_t *op;
+	const struct vsfvmc_lexer_op_t *op;
 	struct vsflist_t list;
 };
 

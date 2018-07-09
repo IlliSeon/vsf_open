@@ -43,7 +43,7 @@ struct vsfvmc_snapshot_t
 			int pt_stmt_state;
 			uint32_t func_stack_sp;
 		} script;
-		uint32_t bytecode_sp;
+		uint32_t bytecode_pos;
 	} compiler;
 };
 

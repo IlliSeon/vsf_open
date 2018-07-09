@@ -125,6 +125,7 @@ enum vsfvmc_errcode_t
 
 	// common error
 	VSFVMC_BUG,
+	VSFVMC_BYTECODE_TOOLONG,
 	VSFVMC_NOT_ENOUGH_RESOURCES,
 	VSFVMC_FATAL_ERROR,			// fatal error above
 	VSFVMC_NOT_SUPPORT,
@@ -221,16 +222,20 @@ struct vsfvmc_script_t
 
 struct vsfvmc_t;
 typedef int (*require_usrlib_t)(void *param, struct vsfvmc_t *vsfvmc, char *path);
+typedef int (*set_bytecode_t)(void *param, uint32_t code, uint32_t pos);
+typedef uint32_t (*get_bytecode_t)(void *param, uint32_t pos);
 struct vsfvmc_t
 {
 	struct
 	{
 		void *param;
 		require_usrlib_t require_lib;
+		set_bytecode_t set_bytecode;
+		get_bytecode_t get_bytecode;
 	} cb;
 
 	struct vsfvmc_script_t script;
-	struct vsf_dynstack_t bytecode;
+	uint32_t bytecode_pos;
 
 	struct vsflist_t ext;
 	struct vsflist_t lexer_list;
@@ -241,7 +246,8 @@ int vsfvmc_register_lexer(struct vsfvmc_t *vsfvmc,
 int vsfvmc_register_ext(struct vsfvmc_t *vm, const struct vsfvm_ext_op_t *op);
 int vsfvmc_script(struct vsfvmc_t *vsfvmc, const char *script_name);
 int vsfvmc_init(struct vsfvmc_t *vsfvmc, void *param,
-	require_usrlib_t require_lib);
+	require_usrlib_t require_lib, set_bytecode_t set_bytecode,
+	get_bytecode_t get_bytecode);
 void vsfvmc_fini(struct vsfvmc_t *vsfvmc);
 int vsfvmc_input(struct vsfvmc_t *vsfvmc, const char *code);
 

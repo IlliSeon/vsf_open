@@ -539,6 +539,22 @@ static const char *vsfvmc_errcode_str[] =
 	TO_STR(VSFVMC_COMPILER_FAIL_USRLIB),
 };
 
+static int usrapp_vm_set_bytecode(void *param, uint32_t code, uint32_t pos)
+{
+	struct usrapp_t *app = (struct usrapp_t *)param;
+	if (pos >= dimof(app->vsfvm.token))
+		return -1;
+
+	app->vsfvm.token[pos] = code;
+	return 0;
+}
+
+static uint32_t usrapp_vm_get_bytecode(void *param, uint32_t pos)
+{
+	struct usrapp_t *app = (struct usrapp_t *)param;
+	return pos >= dimof(app->vsfvm.token) ? 0xFFFFFFFF : app->vsfvm.token[pos];
+}
+
 static struct vsfsm_state_t *
 usrapp_vm_evthandler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 {
@@ -560,13 +576,12 @@ usrapp_vm_evthandler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 
 	{
 		struct vsfvmc_t *vmc = &app->vsfvm.vmc;
-		uint32_t *ptr, *token;
 		char *src = (char *)app->vsfvm.source;
 		int err;
 
 		app->vsfvm.compiling = true;
 		vsfdbg_prints("start compiling ..." VSFCFG_DEBUG_LINEEND);
-		vsfvmc_init(vmc, &usrapp, NULL);
+		vsfvmc_init(vmc, &usrapp, NULL, usrapp_vm_set_bytecode, usrapp_vm_get_bytecode);
 		vsfvmc_register_ext(vmc, &vsfvm_ext_std);
 		vsfvmc_ext_register_vsf(vmc);
 		vsfvmc_register_lexer(vmc, &app->vsfvm.dart);
@@ -590,24 +605,12 @@ usrapp_vm_evthandler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 		err = vsfvmc_input(vmc, "\xFF");
 		if (!err)
 		{
-			if (vmc->bytecode.sp >= dimof(app->vsfvm.token))
-			{
-				vsfdbg_prints("not enough space for token buffer" VSFCFG_DEBUG_LINEEND);
-				goto compile_end;
-			}
 			vsfdbg_printf("compiled OK, token number : %d" VSFCFG_DEBUG_LINEEND,
-					vmc->bytecode.sp);
+					vmc->bytecode_pos);
 
-			token = app->vsfvm.token;
-			for (uint32_t i = 0; i < vmc->bytecode.sp; i++)
-			{
-				ptr = vsf_dynarr_get(&vmc->bytecode.var, i);
-				token[i] = *ptr;
-			}
-
+			app->vsfvm.token_num = vmc->bytecode_pos;
 			vsfdbg_prints("objdump:" VSFCFG_DEBUG_LINEEND);
-			vsfvm_objdump(token, vmc->bytecode.sp);
-			app->vsfvm.token_num = vmc->bytecode.sp;
+			vsfvm_objdump(app->vsfvm.token, app->vsfvm.token_num);
 		}
 		goto compile_end;
 	}

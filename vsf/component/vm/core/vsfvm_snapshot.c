@@ -40,7 +40,7 @@ int vsfvmc_snapshot_take(struct vsfvmc_t *vsfvmc,
 	snapshot_curfunc->ctx_sp = curfunc->ctx.sp;
 	snapshot_curfunc->linktbl_sp = curfunc->linktbl.sp;
 
-	snapshot->compiler.bytecode_sp = vsfvmc->bytecode.sp;
+	snapshot->compiler.bytecode_pos = vsfvmc->bytecode_pos;
 	snapshot->compiler.script.func_stack_sp = vsfvmc->script.func_stack.sp;
 	snapshot->compiler.script.pt_stmt_state = vsfvmc->script.pt_stmt.state;
 	return 0;
@@ -105,7 +105,7 @@ int vsfvmc_snapshot_restore(struct vsfvmc_t *vsfvmc,
 		return -1;
 	curfunc->linktbl.sp = snapshot_curfunc->linktbl_sp;
 
-	vsfvmc->bytecode.sp = snapshot->compiler.bytecode_sp;
+	vsfvmc->bytecode_pos = snapshot->compiler.bytecode_pos;
 	if (vsfvmc->script.func_stack.sp < snapshot->compiler.script.func_stack_sp)
 		return -1;
 	vsfvmc->script.func_stack.sp = snapshot->compiler.script.func_stack_sp;
