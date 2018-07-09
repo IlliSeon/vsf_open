@@ -20,27 +20,12 @@
 #ifndef __VSFUSBH_USBLYZER_H_INCLUDED__
 #define __VSFUSBH_USBLYZER_H_INCLUDED__
 
+// VSFHAL_USBD_ON_STALL is not included in vsfhal.h
+#define VSFHAL_USBD_ON_STALL			VSFHAL_USBD_ON_USER
+
 extern const struct vsfusbh_class_drv_t vsfusbh_usblyzer_drv;
-
-void usblyzer_init(const struct vsfhal_usbd_t *drv, int32_t int_priority);
-
-struct usblyzer_plugin_op_t
-{
-	void (*parse_config)(uint8_t *data, uint16_t len);
-	void (*on_SETUP)(struct usb_ctrlrequest_t *request, int16_t urb_status, uint8_t *data, uint16_t len);
-	void (*on_IN)(uint8_t ep, int16_t urb_status, uint8_t *data, uint16_t len);
-	void (*on_OUT)(uint8_t ep, int16_t urb_status, uint8_t *data, uint16_t len);
-};
-
-struct usblyzer_plugin_t
-{
-	const struct usblyzer_plugin_op_t *op;
-	struct usblyzer_plugin_t *next;
-};
-
-extern struct usblyzer_plugin_t usblyzer_plugin_stdreq;
-extern struct usblyzer_plugin_t usblyzer_plugin_hid;
-extern struct usblyzer_plugin_t usblyzer_plugin_msc;
-void usblyzer_register_plugin(struct usblyzer_plugin_t *plugin);
+void usblyzer_init(const struct vsfhal_usbd_t *drv, int32_t int_priority,
+		void *param,
+		void (*on_event)(void*, enum vsfhal_usbd_evt_t, uint32_t, uint8_t*, uint32_t));
 
 #endif // __VSFUSBH_USBLYZER_H_INCLUDED__

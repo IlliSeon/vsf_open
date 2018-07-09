@@ -44,6 +44,34 @@ struct usrapp_t usrapp =
 
 void usrapp_initial_init(struct usrapp_t *app){}
 
+static void usrapp_usblyzer_on_event(void *param, enum vsfhal_usbd_evt_t evt,
+		uint32_t value, uint8_t *buff, uint32_t size)
+{
+	switch (evt)
+	{
+	case VSFHAL_USBD_ON_RESET:
+		vsfdbg_prints("Reset" VSFCFG_DEBUG_LINEEND);
+		break;
+	case VSFHAL_USBD_ON_SETUP:
+		vsfdbg_prints("SETUP: ");
+		vsfdbg_printb(buff, size, 1, 16, true, true);
+		break;
+	case VSFHAL_USBD_ON_IN:
+		vsfdbg_printf("IN%d(%d): ", value, size);
+		if (buff != NULL)
+			vsfdbg_printb(buff, size, 1, 16, true, true);
+		break;
+	case VSFHAL_USBD_ON_OUT:
+		vsfdbg_printf("OUT%d(%d): ", value, size);
+		if (buff != NULL)
+			vsfdbg_printb(buff, size, 1, 16, true, true);
+		break;
+	case VSFHAL_USBD_ON_STALL:
+		vsfdbg_printf("IN%d: STALL" VSFCFG_DEBUG_LINEEND, value);
+		break;
+	}
+}
+
 void usrapp_srt_init(struct usrapp_t *app)
 {
 	vsf_usart_stream_init(&app->debug.uart_stream);
@@ -52,7 +80,7 @@ void usrapp_srt_init(struct usrapp_t *app)
 	vsfusbh_init(&usrapp.usbh);
 	vsfusbh_register_driver(&usrapp.usbh, &vsfusbh_hub_drv);
 
-	usblyzer_init(&vsfhal_usbd, 0xFF);
+	usblyzer_init(&vsfhal_usbd, 0xFF, NULL, usrapp_usblyzer_on_event);
 	vsfusbh_register_driver(&usrapp.usbh, &vsfusbh_usblyzer_drv);
 }
 

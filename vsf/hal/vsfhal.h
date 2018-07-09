@@ -241,6 +241,7 @@ enum vsfhal_usbd_evt_t
 	VSFHAL_USBD_ON_OUT,
 	VSFHAL_USBD_ON_UNDERFLOW,
 	VSFHAL_USBD_ON_OVERFLOW,
+	VSFHAL_USBD_ON_USER,
 };
 enum vsfhal_usbd_error_t
 {

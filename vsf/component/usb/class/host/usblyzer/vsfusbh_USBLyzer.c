@@ -40,6 +40,12 @@ struct usblyzer_urbcb_t
 
 struct usblyzer_t
 {
+	struct
+	{
+		void *param;
+		void (*on_event)(void*, enum vsfhal_usbd_evt_t, uint32_t, uint8_t*, uint32_t);
+	} cb;
+
 	struct vsfusbh_t *usbh;
 	struct vsfusbh_device_t *dev;
 
@@ -68,7 +74,6 @@ struct usblyzer_t
 		struct usblyzer_urbcb_t all[16 + 16];
 	} urbcb;
 	struct usblyzer_urbcb_t *pending_urbcb;
-	struct usblyzer_plugin_t *pluginlist;
 	bool resetting;
 } static usblyzer;
 
@@ -136,17 +141,15 @@ static vsf_err_t usblyzer_usbd_ep_recv(struct usblyzer_urbcb_t *urbcb)
 		uint8_t *data = (uint8_t *)urbcb->urb->transfer_buffer + urbcb->curpos;
 
 		drv->ep.read_OUT_buffer(urbcb->ep, data, cursize);
-		vsfdbg_printf("OUT%d(%d): ", urbcb->ep, cursize);
-		vsfdbg_printb(data, cursize, 1, 16, true, true);
+		if (usblyzer.cb.on_event != NULL)
+			usblyzer.cb.on_event(usblyzer.cb.param, VSFHAL_USBD_ON_OUT, urbcb->ep, data, cursize);
 		urbcb->curpos += cursize;
 		remain = urbcb->totalsize - urbcb->curpos;
 	}
 	else
 	{
-		if (!cursize)
-			vsfdbg_printf("OUT%d(0): " VSFCFG_DEBUG_LINEEND, urbcb->ep);
-		else
-			vsfdbg_prints("Data received without prepared buffer" VSFCFG_DEBUG_LINEEND);
+		if (usblyzer.cb.on_event != NULL)
+			usblyzer.cb.on_event(usblyzer.cb.param, VSFHAL_USBD_ON_OUT, urbcb->ep, NULL, 0);
 		return VSFERR_NONE;
 	}
 	if ((remain > 0) && (cursize >= epsize))
@@ -168,8 +171,8 @@ static vsf_err_t usblyzer_usbd_ep_send(struct usblyzer_urbcb_t *urbcb)
 	{
 		uint8_t *data = (uint8_t *)urbcb->urb->transfer_buffer + urbcb->curpos;
 
-		vsfdbg_printf("IN%d(%d): ", urbcb->ep, cursize);
-		vsfdbg_printb(data, cursize, 1, 16, true, true);
+		if (usblyzer.cb.on_event != NULL)
+			usblyzer.cb.on_event(usblyzer.cb.param, VSFHAL_USBD_ON_IN, urbcb->ep, data, cursize);
 		drv->ep.write_IN_buffer(urbcb->ep, data, cursize);
 		drv->ep.set_IN_count(urbcb->ep, cursize);
 
@@ -181,7 +184,8 @@ static vsf_err_t usblyzer_usbd_ep_send(struct usblyzer_urbcb_t *urbcb)
 	}
 	else if (urbcb->needzlp)
 	{
-		vsfdbg_printf("IN%d(0): " VSFCFG_DEBUG_LINEEND, urbcb->ep);
+		if (usblyzer.cb.on_event != NULL)
+			usblyzer.cb.on_event(usblyzer.cb.param, VSFHAL_USBD_ON_IN, urbcb->ep, NULL, 0);
 		urbcb->needzlp = false;
 		drv->ep.set_IN_count(urbcb->ep, 0);
 		return VSFERR_NOT_READY;
@@ -289,14 +293,6 @@ static void usblyzer_usbd_setup_process(struct usblyzer_urbcb_t *urbcb)
 	uint8_t *data = urbcb->urb->transfer_buffer;
 	uint16_t len = urbcb->urb->actual_length;
 
-	struct usblyzer_plugin_t *plugin = usblyzer.pluginlist;
-	while (plugin != NULL)
-	{
-		if (plugin->op->on_SETUP != NULL)
-			plugin->op->on_SETUP(request, URB_OK, data, len);
-		plugin = plugin->next;
-	}
-
 	if (USB_TYPE_STANDARD == type)
 	{
 		if (USB_RECIP_DEVICE == recip)
@@ -325,14 +321,6 @@ static void usblyzer_usbd_setup_process(struct usblyzer_urbcb_t *urbcb)
 						if (!usblyzer.usbd.config_desc)
 							break;
 						memcpy(usblyzer.usbd.config_desc, data, len);
-
-						plugin = usblyzer.pluginlist;
-						while (plugin != NULL)
-						{
-							if (plugin->op->parse_config != NULL)
-								plugin->op->parse_config(data, len);
-							plugin = plugin->next;
-						}
 					}
 					break;
 				}
@@ -464,18 +452,11 @@ usblyzer_usbh_devurb_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 			else
 			{
 				// urb failed, stall ep0
-				vsfdbg_prints("IN0: STALL" VSFCFG_DEBUG_LINEEND);
+				if (usblyzer.cb.on_event != NULL)
+					usblyzer.cb.on_event(usblyzer.cb.param, VSFHAL_USBD_ON_STALL, 0, NULL, 0);
 				drv->ep.set_IN_stall(0);
 				drv->ep.set_OUT_stall(0);
 				usblyzer.usbd.request_state = USB_IDLE;
-
-				struct usblyzer_plugin_t *plugin = usblyzer.pluginlist;
-				while (plugin != NULL)
-				{
-					if (plugin->op->on_SETUP != NULL)
-						plugin->op->on_SETUP(request, urb->status, NULL, 0);
-					plugin = plugin->next;
-				}
 			}
 		}
 		else
@@ -484,16 +465,9 @@ usblyzer_usbh_devurb_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 			{
 				if (urb->status != URB_OK)
 				{
-					vsfdbg_printf("IN%d: STALL" VSFCFG_DEBUG_LINEEND, urbcb->ep);
+					if (usblyzer.cb.on_event != NULL)
+						usblyzer.cb.on_event(usblyzer.cb.param, VSFHAL_USBD_ON_STALL, urbcb->ep, NULL, 0);
 					drv->ep.set_IN_stall(urbcb->ep);
-
-					struct usblyzer_plugin_t *plugin = usblyzer.pluginlist;
-					while (plugin != NULL)
-					{
-						if (plugin->op->on_IN != NULL)
-							plugin->op->on_IN(urbcb->ep, urb->status, NULL, 0);
-						plugin = plugin->next;
-					}
 				}
 				else
 				{
@@ -511,14 +485,6 @@ usblyzer_usbh_devurb_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 				{
 					vsfdbg_printf("OUT%d: STALL" VSFCFG_DEBUG_LINEEND, urbcb->ep);
 					drv->ep.set_OUT_stall(urbcb->ep);
-
-					struct usblyzer_plugin_t *plugin = usblyzer.pluginlist;
-					while (plugin != NULL)
-					{
-						if (plugin->op->on_OUT != NULL)
-							plugin->op->on_OUT(urbcb->ep, urb->status, NULL, 0);
-						plugin = plugin->next;
-					}
 				}
 			}
 		}
@@ -607,7 +573,8 @@ usblyzer_usbd_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 			drv->ep.set_type(0, USB_EP_TYPE_CONTROL);
 			drv->set_address(0);
 
-			vsfdbg_prints("Reset" VSFCFG_DEBUG_LINEEND);
+			if (usblyzer->cb.on_event != NULL)
+				usblyzer->cb.on_event(usblyzer->cb.param, VSFHAL_USBD_ON_RESET, 0, NULL, 0);
 			drv->reset();
 			vsftimer_create(sm, 10, 1, USBLYZER_EVT_TIMEOUT);
 		}
@@ -628,9 +595,9 @@ usblyzer_usbd_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 			isin = (request->bRequestType & USB_DIR_MASK) == USB_DIR_IN;
 			urbcb = isin ? &usblyzer->urbcb.in[0] : &usblyzer->urbcb.out[0];
 
-			vsfdbg_prints("SETUP: ");
-			vsfdbg_printb((uint8_t *)&usblyzer->usbd.request,
-						sizeof(usblyzer->usbd.request), 1, 16, true, true);
+			if (usblyzer->cb.on_event != NULL)
+				usblyzer->cb.on_event(usblyzer->cb.param, VSFHAL_USBD_ON_SETUP, 0,
+					(uint8_t *)&usblyzer->usbd.request, sizeof(usblyzer->usbd.request));
 
 			usblyzer_usbd_setup_patch(request);
 			if (!usblyzer_usbh_prepare_urb(urbcb, request->wLength))
@@ -725,16 +692,7 @@ usblyzer_usbd_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 					if (!usblyzer_usbd_ep_send(urbcb))
 					{
 						// data sent, submit next urb
-						struct usblyzer_plugin_t *plugin = usblyzer->pluginlist;
 						urbcb->transact_finished = true;
-						uint8_t *data = urbcb->urb->transfer_buffer;
-						uint16_t len = urbcb->urb->actual_length;
-						while (plugin != NULL)
-						{
-							if (plugin->op->on_IN != NULL)
-								plugin->op->on_IN(urbcb->ep, URB_OK, data, len);
-							plugin = plugin->next;
-						}
 					}
 				}
 				break;
@@ -790,16 +748,6 @@ usblyzer_usbd_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 							usblyzer_usbd_ep_recv(urbcb);
 						else
 							urbcb->urb->transfer_flags |= URB_ZERO_PACKET;
-
-						struct usblyzer_plugin_t *plugin = usblyzer->pluginlist;
-						uint8_t *data = urbcb->urb->transfer_buffer;
-						uint16_t len = urbcb->totalsize;
-						while (plugin != NULL)
-						{
-							if (plugin->op->on_OUT != NULL)
-								plugin->op->on_OUT(urbcb->ep, URB_OK, data, len);
-							plugin = plugin->next;
-						}
 
 						vsfsm_init(&urbcb->sm);
 						urbcb->ep_inited = true;
@@ -898,16 +846,13 @@ const struct vsfusbh_class_drv_t vsfusbh_usblyzer_drv =
 	.disconnect = vsfusbh_usblyzer_disconnect,
 };
 
-void usblyzer_register_plugin(struct usblyzer_plugin_t *plugin)
-{
-	plugin->next = usblyzer.pluginlist;
-	usblyzer.pluginlist = plugin;
-}
-
-void usblyzer_init(const struct vsfhal_usbd_t *drv, int32_t int_priority)
+void usblyzer_init(const struct vsfhal_usbd_t *drv, int32_t int_priority, void *param,
+		void (*on_event)(void*, enum vsfhal_usbd_evt_t, uint32_t, uint8_t*, uint32_t))
 {
 	struct usblyzer_urbcb_t *urbcb;
 
+	usblyzer.cb.param = param;
+	usblyzer.cb.on_event = on_event;
 	usblyzer.usbd.drv = drv;
 	usblyzer.usbd.int_priority = int_priority;
 
