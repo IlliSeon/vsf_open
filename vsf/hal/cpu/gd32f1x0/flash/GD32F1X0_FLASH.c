@@ -85,8 +85,15 @@ vsf_err_t vsfhal_flash_config_cb(uint8_t index, uint32_t int_priority,
 
 	vsfhal_flash[index].cb.param = param;
 	vsfhal_flash[index].cb.onfinish = onfinish;
-	NVIC->IP[FMC_IRQn] = int_priority;
-	NVIC->ISER[FMC_IRQn >> 0x05] = 1UL << (FMC_IRQn & 0x1F);
+	if (onfinish != NULL)
+	{
+		NVIC_SetPriority(FMC_IRQn, int_priority);
+		NVIC_EnableIRQ(FMC_IRQn);
+	}
+	else
+	{
+		NVIC_DisableIRQ(FMC_IRQn);
+	}
 	return VSFERR_NONE;
 }
 

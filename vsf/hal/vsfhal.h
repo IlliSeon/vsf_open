@@ -75,6 +75,12 @@ vsf_err_t vsfhal_timer_stop(uint8_t index);
 /*******************************************************************************
 FLASH
 *******************************************************************************/
+enum vsfhal_flash_op_t
+{
+	VSFHAL_FLASH_OP_ERASE = 0,
+	VSFHAL_FLASH_OP_READ = 1,
+	VSFHAL_FLASH_OP_WRITE = 2,
+};
 vsf_err_t vsfhal_flash_init(uint8_t index);
 vsf_err_t vsfhal_flash_fini(uint8_t index);
 vsf_err_t vsfhal_flash_capacity(uint8_t index, uint32_t *pagesize, uint32_t *pagenum);
