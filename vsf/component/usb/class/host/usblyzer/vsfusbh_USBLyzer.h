@@ -24,8 +24,8 @@
 #define VSFHAL_USBD_ON_STALL			VSFHAL_USBD_ON_USER
 
 extern const struct vsfusbh_class_drv_t vsfusbh_usblyzer_drv;
-void usblyzer_init(const struct vsfhal_usbd_t *drv, int32_t int_priority,
-		void *param,
-		void (*on_event)(void*, enum vsfhal_usbd_evt_t, uint32_t, uint8_t*, uint32_t));
+void usblyzer_init(const struct vsfhal_usbd_t *drv, int32_t int_priority, void *param,
+		void (*on_event)(void*, enum vsfhal_usbd_evt_t, uint32_t, uint8_t*, uint32_t),
+		bool (*output_isbusy)(void *param));
 
 #endif // __VSFUSBH_USBLYZER_H_INCLUDED__

@@ -8,7 +8,7 @@ struct usrapp_t
 		struct vsf_usart_stream_t uart_stream;
 		struct vsf_fifostream_t stream_tx;
 		struct vsf_fifostream_t stream_rx;
-		uint8_t txbuff[100 * 1024];
+		uint8_t txbuff[4 * 1024];
 		uint8_t rxbuff[65];
 	} debug;
 };

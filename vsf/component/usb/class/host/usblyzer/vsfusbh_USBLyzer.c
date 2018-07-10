@@ -35,7 +35,9 @@ struct usblyzer_urbcb_t
 	uint8_t urb_submitted : 1;
 	uint8_t needzlp : 1;
 	uint8_t ep_inited : 1;
+#ifndef VSFHAL_CFG_USBD_ONNAK_EN
 	uint8_t transact_finished : 1;
+#endif
 };
 
 struct usblyzer_t
@@ -44,6 +46,7 @@ struct usblyzer_t
 	{
 		void *param;
 		void (*on_event)(void*, enum vsfhal_usbd_evt_t, uint32_t, uint8_t*, uint32_t);
+		bool (*output_isbusy)(void *param);
 	} cb;
 
 	struct vsfusbh_t *usbh;
@@ -122,12 +125,14 @@ static vsf_err_t usblyzer_usbd_on_OUT(void *p, uint8_t ep)
 	return vsfsm_post_evt_pending(sm, USBLYZER_EVT_OUTEP(ep));
 }
 
+#ifdef VSFHAL_CFG_USBD_ONNAK_EN
 static vsf_err_t usblyzer_usbd_on_NAK(void *p, uint8_t ep)
 {
 	struct usblyzer_t *usblyzer = p;
 	struct vsfsm_t *sm = &usblyzer->usbd.sm;
 	return vsfsm_post_evt_pending(sm, USBLYZER_EVT_NAKEP(ep));
 }
+#endif
 
 static vsf_err_t usblyzer_usbd_ep_recv(struct usblyzer_urbcb_t *urbcb)
 {
@@ -366,6 +371,13 @@ static void usblyzer_usbd_setup_process(struct usblyzer_urbcb_t *urbcb)
 							{
 								drv->ep.set_IN_epsize(epindex, epsize);
 								usblyzer.dev->ep_mps_in[epindex] = epsize;
+#ifndef VSFHAL_CFG_USBD_ONNAK_EN
+								if (!usblyzer_usbh_prepare_urb(urbcb, epsize))
+								{
+									vsfsm_init(&urbcb->sm);
+									urbcb->ep_inited = true;
+								}
+#endif
 							}
 							else
 							{
@@ -425,6 +437,19 @@ usblyzer_usbh_devurb_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 			urbcb->urb_submitted = true;
 		break;
 	case VSFSM_EVT_URB_COMPLETE:
+		if (usblyzer.cb.output_isbusy != NULL)
+		{
+			if (usblyzer.cb.output_isbusy(usblyzer.cb.param))
+			{
+				vsftimer_create(sm, 1, 1, VSFSM_EVT_URB_COMPLETE);
+				break;
+			}
+		}
+#ifdef VSF_USBLYZER_URB_DELAY
+		vsftimer_create(sm, VSF_USBLYZER_URB_DELAY, 1, VSFSM_EVT_TIMER);
+		break;
+#endif
+	case VSFSM_EVT_TIMER:
 		urbcb->urb_submitted = false;
 		if (!urbcb->ep)
 		{
@@ -501,7 +526,9 @@ static void usblyzer_usbd_on_event(void *param, enum vsfhal_usbd_evt_t evt, uint
 	case VSFHAL_USBD_ON_SETUP:	usblyzer_usbd_on_SETUP(param); break;
 	case VSFHAL_USBD_ON_IN:		usblyzer_usbd_on_IN(param, (uint8_t)value); break;
 	case VSFHAL_USBD_ON_OUT:	usblyzer_usbd_on_OUT(param, (uint8_t)value); break;
+#ifdef VSFHAL_CFG_USBD_ONNAK_EN
 	case VSFHAL_USBD_ON_NAK:	usblyzer_usbd_on_NAK(param, (uint8_t)value); break;
+#endif
 	}
 }
 
@@ -560,7 +587,9 @@ usblyzer_usbd_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 					usblyzer->urbcb.all[i].epsize = 0;
 				usblyzer->urbcb.all[i].urb_submitted = false;
 				usblyzer->urbcb.all[i].ep_inited = false;
+#ifndef VSFHAL_CFG_USBD_ONNAK_EN
 				usblyzer->urbcb.all[i].transact_finished = true;
+#endif
 				if (usblyzer->urbcb.all[i].urb != NULL)
 					vsfusbh_free_urb(usblyzer->usbh, &usblyzer->urbcb.all[i].urb);
 			}
@@ -691,8 +720,12 @@ usblyzer_usbd_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 				{
 					if (!usblyzer_usbd_ep_send(urbcb))
 					{
-						// data sent, submit next urb
+#ifdef VSFHAL_CFG_USBD_ONNAK_EN
 						urbcb->transact_finished = true;
+#else
+						// data sent, submit next urb
+						usblyzer_usbh_submit_urb(urbcb);
+#endif
 					}
 				}
 				break;
@@ -758,6 +791,7 @@ usblyzer_usbd_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 					}
 				}
 				break;
+#ifdef VSFHAL_CFG_USBD_ONNAK_EN
 			case USBLYZER_EVT_EPNAK:
 				urbcb = &usblyzer->urbcb.in[ep & 0x0F];
 				if (urbcb->ep_inited)
@@ -775,6 +809,7 @@ usblyzer_usbd_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 					urbcb->ep_inited = true;
 				}
 				break;
+#endif
 			}
 		}
 	}
@@ -847,12 +882,14 @@ const struct vsfusbh_class_drv_t vsfusbh_usblyzer_drv =
 };
 
 void usblyzer_init(const struct vsfhal_usbd_t *drv, int32_t int_priority, void *param,
-		void (*on_event)(void*, enum vsfhal_usbd_evt_t, uint32_t, uint8_t*, uint32_t))
+		void (*on_event)(void*, enum vsfhal_usbd_evt_t, uint32_t, uint8_t*, uint32_t),
+		bool (*output_isbusy)(void *param))
 {
 	struct usblyzer_urbcb_t *urbcb;
 
 	usblyzer.cb.param = param;
 	usblyzer.cb.on_event = on_event;
+	usblyzer.cb.output_isbusy = output_isbusy;
 	usblyzer.usbd.drv = drv;
 	usblyzer.usbd.int_priority = int_priority;
 
