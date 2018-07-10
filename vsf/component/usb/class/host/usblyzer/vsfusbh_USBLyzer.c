@@ -35,7 +35,7 @@ struct usblyzer_urbcb_t
 	uint8_t urb_submitted : 1;
 	uint8_t needzlp : 1;
 	uint8_t ep_inited : 1;
-#ifndef VSFHAL_CFG_USBD_ONNAK_EN
+#ifdef VSFHAL_CFG_USBD_ONNAK_EN
 	uint8_t transact_finished : 1;
 #endif
 };
@@ -406,8 +406,9 @@ static void usblyzer_usbd_setup_process(struct usblyzer_urbcb_t *urbcb)
 				{
 					drv->ep.reset_IN_toggle(epnum);
 					drv->ep.clear_IN_stall(epnum);
-
+#ifndef VSFHAL_CFG_USBD_ONNAK_EN
 					usblyzer_usbh_submit_urb(&usblyzer.urbcb.in[epnum]);
+#endif
 				}
 				else
 				{
