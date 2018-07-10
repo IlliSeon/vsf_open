@@ -483,6 +483,9 @@ usblyzer_usbh_devurb_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 				drv->ep.set_IN_stall(0);
 				drv->ep.set_OUT_stall(0);
 				usblyzer.usbd.request_state = USB_IDLE;
+#ifdef VSFHAL_CFG_USBD_ONNAK_EN
+				urbcb->transact_finished = true;
+#endif
 			}
 		}
 		else
@@ -494,6 +497,9 @@ usblyzer_usbh_devurb_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 					if (usblyzer.cb.on_event != NULL)
 						usblyzer.cb.on_event(usblyzer.cb.param, VSFHAL_USBD_ON_STALL, urbcb->ep, NULL, 0);
 					drv->ep.set_IN_stall(urbcb->ep);
+#ifdef VSFHAL_CFG_USBD_ONNAK_EN
+					urbcb->transact_finished = true;
+#endif
 				}
 				else
 				{
@@ -588,7 +594,7 @@ usblyzer_usbd_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 					usblyzer->urbcb.all[i].epsize = 0;
 				usblyzer->urbcb.all[i].urb_submitted = false;
 				usblyzer->urbcb.all[i].ep_inited = false;
-#ifndef VSFHAL_CFG_USBD_ONNAK_EN
+#ifdef VSFHAL_CFG_USBD_ONNAK_EN
 				usblyzer->urbcb.all[i].transact_finished = true;
 #endif
 				if (usblyzer->urbcb.all[i].urb != NULL)
