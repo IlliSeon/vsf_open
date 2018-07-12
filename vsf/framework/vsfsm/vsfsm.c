@@ -244,9 +244,13 @@ static vsf_err_t vsfsm_dispatch_evt_protected(struct vsfsm_t *sm, vsfsm_evt_t ev
 {
 	vsf_err_t err;
 
+#if VSFSM_CFG_PREMPT_EN
 	sm->evt_count++;
+#endif
 	err = vsfsm_dispatch_evt(sm, evt);
+#if VSFSM_CFG_PREMPT_EN
 	sm->evt_count--;
+#endif
 	return err;
 }
 

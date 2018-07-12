@@ -27,6 +27,7 @@ static const char *vsfvmc_errcode_str[] =
 
 	// common error
 	TO_STR(VSFVMC_BUG),
+	TO_STR(VSFVMC_BYTECODE_TOOLONG),
 	TO_STR(VSFVMC_NOT_ENOUGH_RESOURCES),
 	TO_STR(VSFVMC_FATAL_ERROR),
 	TO_STR(VSFVMC_NOT_SUPPORT),
@@ -54,7 +55,28 @@ static const char *vsfvmc_errcode_str[] =
 	TO_STR(VSFVMC_COMPILER_FAIL_USRLIB),
 };
 
-static int require_usrlib(void *param, struct vsfvmc_t *vmc, char *path)
+static int vm_set_bytecode(void *param, uint32_t code, uint32_t pos)
+{
+	struct usrapp_t *app = (struct usrapp_t *)param;
+	struct vsfvm_script_t *rt_script = &app->vsfvm.runtime.script;
+	uint32_t *token = (uint32_t *)rt_script->token;
+
+	if (pos >= TOKEN_BUFFER_SIZE)
+		return -1;
+
+	token[pos] = code;
+	return 0;
+}
+
+static uint32_t vm_get_bytecode(void *param, uint32_t pos)
+{
+	struct usrapp_t *app = (struct usrapp_t *)param;
+	struct vsfvm_script_t *rt_script = &app->vsfvm.runtime.script;
+	uint32_t *token = (uint32_t *)rt_script->token;
+	return pos >= TOKEN_BUFFER_SIZE ? 0xFFFFFFFF : token[pos];
+}
+
+static int vm_require_usrlib(void *param, struct vsfvmc_t *vmc, char *path)
 {
 	struct usrapp_t *app = (struct usrapp_t *)param;
 	char *fbuff = NULL;
@@ -116,7 +138,7 @@ static void usrapp_on_stdin(void *param)
 	struct vsfvm_t *vm = &app->vsfvm.runtime.vm;
 	struct vsfvm_script_t *rt_script = &app->vsfvm.runtime.script;
 
-	uint32_t *tkbuff = (uint32_t *)rt_script->token, *ptr;
+	uint32_t *tkbuff = (uint32_t *)rt_script->token;
 	uint32_t tkpos;
 	int err;
 
@@ -160,27 +182,13 @@ static void usrapp_on_stdin(void *param)
 		if ((vmc->script.cur_func.curctx.etoken.token > 0) ||
 			(vmc->script.cur_func.ctx.sp > 0) ||
 			(vmc->script.func_stack.sp > 1) ||
-			(app->vsfvm.vmc_bytecode_pos == vmc->bytecode.sp))
+			(app->vsfvm.vmc_bytecode_pos == vmc->bytecode_pos))
 		{
 			return;
 		}
 
-		// 2. push new bytecode
-		for (tkpos = app->vsfvm.vmc_bytecode_pos;
-			tkpos < vmc->bytecode.sp; tkpos++)
-		{
-			ptr = vsf_dynarr_get(&vmc->bytecode.var, tkpos);
-			if (!ptr)
-			{
-				vsfdbg_prints("bug, pleaser report to author\n");
-				goto exit_vm;
-			}
-			if (tkpos >= (TOKEN_BUFFER_SIZE >> 2))
-				goto exit_vm;
-
-			tkbuff[tkpos] = *ptr;
-		}
-		app->vsfvm.vmc_bytecode_pos = vmc->bytecode.sp;
+		// 2. save bytecode_pos
+		tkpos = app->vsfvm.vmc_bytecode_pos = vmc->bytecode_pos;
 		// 3. append breakpoint
 		tkbuff[tkpos] = VSFVM_KEYWORD(VSFVM_CODE_KEYWORD_breakpoint, 0, 0);
 		// 4. wake all threads
@@ -236,7 +244,7 @@ void usrapp_srt_init(struct usrapp_t *app)
 	FILE *fin = NULL, *fout = NULL;
 	char *fout_path = NULL;
 	long flen;
-	uint32_t *tkbuff = NULL, *ptr;
+	uint32_t *tkbuff = NULL;
 
 	struct vsfvmc_t *vmc = &app->vsfvm.compiler.vmc;
 	struct vsfvm_t *vm = &app->vsfvm.runtime.vm;
@@ -270,7 +278,7 @@ void usrapp_srt_init(struct usrapp_t *app)
 				break;
 			case 's':
 				app->vsfvm.compiler.file_num = 1;
-				vsfvmc_init(vmc, &usrapp, require_usrlib);
+				vsfvmc_init(vmc, &usrapp, vm_require_usrlib, vm_set_bytecode, vm_get_bytecode);
 				vsfvmc_register_ext(vmc, &vsfvm_ext_std);
 				vsfvmc_ext_register_vsf(vmc);
 				vsfvmc_register_lexer(vmc, &app->vsfvm.compiler.dart);
@@ -345,18 +353,20 @@ void usrapp_srt_init(struct usrapp_t *app)
 		goto print_help;
 
 	app->vsfvm.compiler.file_num = 0;
-	vsfvmc_init(vmc, &usrapp, require_usrlib);
+	vsfvmc_init(vmc, &usrapp, vm_require_usrlib, vm_set_bytecode, vm_get_bytecode);
 	vsfvmc_register_ext(vmc, &vsfvm_ext_std);
 	vsfvmc_ext_register_vsf(vmc);
 	vsfvmc_register_lexer(vmc, &app->vsfvm.compiler.dart);
-
 	vsfvmc_script(vmc, argv[srcfile_idx]);
-	if (require_usrlib(&usrapp, vmc, argv[srcfile_idx]))
+
+	tkbuff = malloc(TOKEN_BUFFER_SIZE + 1);
+	rt_script->token = tkbuff;
+	rt_script->token_num = 0;
+
+	if (vm_require_usrlib(&usrapp, vmc, argv[srcfile_idx]))
 		goto clean_up_and_exit;
 	else
 	{
-		tkbuff = malloc(4 * vmc->bytecode.sp);
-
 		if (!fout_path)
 			fout_path = "a.bin";
 		fout = fopen(fout_path, "wb+");
@@ -365,28 +375,16 @@ void usrapp_srt_init(struct usrapp_t *app)
 			vsfdbg_printf("can not create file %s\n", fout_path);
 			goto clean_up_and_exit;
 		}
-		for (uint32_t i = 0; i < vmc->bytecode.sp; i++)
+		if (fwrite(tkbuff, 1, 4 * vmc->bytecode_pos, fout) != 4 * vmc->bytecode_pos)
 		{
-			ptr = vsf_dynarr_get(&vmc->bytecode.var, i);
-			if (!ptr)
-			{
-				vsfdbg_prints("bug, pleaser report to author\n");
-				goto clean_up_and_exit;
-			}
-			tkbuff[i] = *ptr;
-			if (fwrite(ptr, 1, 4, fout) != 4)
-			{
-				vsfdbg_prints("fail to write output file\n");
-				fclose(fout);
-				goto clean_up_and_exit;
-			}
+			vsfdbg_prints("fail to write output file\n");
+			fclose(fout);
+			goto clean_up_and_exit;
 		}
+		rt_script->token_num = vmc->bytecode_pos;
 
 		vsfdbg_prints("objdump:\n");
-		vsfvm_objdump(tkbuff, vmc->bytecode.sp);
-
-		rt_script->token = tkbuff;
-		rt_script->token_num = vmc->bytecode.sp;
+		vsfvm_objdump((uint32_t *)rt_script->token, rt_script->token_num);
 
 		vsfvmc_fini(vmc);
 		fclose(fout);
