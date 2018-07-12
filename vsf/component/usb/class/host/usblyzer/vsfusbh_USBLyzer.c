@@ -784,8 +784,9 @@ usblyzer_usbd_evt_handler(struct vsfsm_t *sm, vsfsm_evt_t evt)
 					urbcb->totalsize = drv->ep.get_OUT_count(ep);
 					if (!usblyzer_usbh_prepare_urb(urbcb, urbcb->totalsize))
 					{
+						usblyzer_usbd_ep_recv(urbcb);
 						if (urbcb->totalsize)
-							usblyzer_usbd_ep_recv(urbcb);
+							urbcb->urb->transfer_flags &= ~URB_ZERO_PACKET;
 						else
 							urbcb->urb->transfer_flags |= URB_ZERO_PACKET;
 
